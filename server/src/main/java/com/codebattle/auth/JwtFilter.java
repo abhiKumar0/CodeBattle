@@ -1,58 +1,64 @@
 package com.codebattle.auth;
 
 
+import com.codebattle.user.User;
+import com.codebattle.user.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
 import java.security.Key;
 import java.util.Date;
 
 @Component
-public class JwtFilter {
+@RequiredArgsConstructor
+public class JwtFilter extends OncePerRequestFilter {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
-    @Value("${jwt.expiration}")
-    private long expiration;
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws ServletException, IOException {
+        String header = req.getHeader("Authorization");
 
-
-    private Key getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
-    }
-
-    public String generateToken(String userId, String email) {
-        return Jwts.builder()
-                .setSubject(userId)
-                .claim("email", email)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis()+expiration))
-                .signWith(getKey())
-                .compact();
-    }
-
-    public String extractUserId(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    public boolean isValid(String token) {
-        try {
-            getClaims(token);
-            return true;
-        } catch (JwtException e) {
-            return false;
+        if (header == null || !header.startsWith("Bearer ")) {
+            chain.doFilter(req, res);
+            return;
         }
+
+        String token = header.replace("Bearer ", "");
+        if (!jwtUtil.isValid(token)) {
+            chain.doFilter(req, res);
+            return;
+        }
+
+        String userId = jwtUtil.extractUserId(token);
+
+        User user = userRepository.findById(userId).orElse(null);
+
+        if (user == null) {
+            chain.doFilter(req, res);
+            return;
+        }
+
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null, java.util.List.of());
+        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        chain.doFilter(req, res);
     }
 
-    private Claims getClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
 }
