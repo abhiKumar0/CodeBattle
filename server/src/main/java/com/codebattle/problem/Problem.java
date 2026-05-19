@@ -17,13 +17,13 @@ import java.util.List;
 public class Problem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @Column(nullable = false)
     private String title;
 
-    @Enumerated(EnumType.STRING) // store enum in string format
+    @Enumerated(EnumType.STRING) //Easy, Medium, Hard
     @Column(nullable = false)
     private Difficulty difficulty;
 

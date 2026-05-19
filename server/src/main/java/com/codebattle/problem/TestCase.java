@@ -12,8 +12,8 @@ import lombok.*;
 public class TestCase {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY) // problem object not loaded immediately only when needed
     @JoinColumn(name = "problem_id", nullable = false) // froeing key in test casde table

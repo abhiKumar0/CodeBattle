@@ -31,7 +31,7 @@ public class ProblemService {
                 .toList();
     }
 
-    public ProblemDto.DetailResponse getProblemById(Long id) {
+    public ProblemDto.DetailResponse getProblemById(String id) {
         Problem problem = findOrThrow(id);
         return toDetail(problem);
     }
@@ -81,7 +81,7 @@ public class ProblemService {
 
     // ─── Internal helpers ─────────────────────────────────────────────────────
 
-    Problem findOrThrow(Long id) {
+    Problem findOrThrow(String id) {
         return problemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Problem not found: " + id));

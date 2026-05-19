@@ -43,7 +43,7 @@ public class ProblemDto {
     @Builder
     // prolbem details shown to the client side
     public static class DetailResponse {
-        private Long id;
+        private String id;
         private String title;
         private Difficulty difficulty;
         private String description;
@@ -62,7 +62,7 @@ public class ProblemDto {
     @Data
     @Builder
     public static class SummaryResponse {
-        private Long id;
+        private String id;
         private String title;
         private Difficulty difficulty;
         private String topic;
@@ -73,7 +73,7 @@ public class ProblemDto {
     @Builder
     // to send viisble test case
     public static class TestCaseResponse {
-        private Long id;
+        private String id;
         private String input;
         private String expectedOutput;
     }

@@ -26,6 +26,10 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Role role = Role.USER;
+
     @Column(nullable = false)
     private int rating = 1200;
 

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 import java.util.Optional;
 
-public interface ProblemRepository extends JpaRepository<Problem, Long> {
+public interface ProblemRepository extends JpaRepository<Problem, String> {
 
     List<Problem> findByDifficulty(Difficulty difficulty); // serch the sql query with the diffiiculty
 

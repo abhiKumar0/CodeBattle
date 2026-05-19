@@ -44,7 +44,7 @@ public class ProblemController {
      * GET /api/problems/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ProblemDto.DetailResponse> getById(@PathVariable Long id) {
+    public ResponseEntity<ProblemDto.DetailResponse> getById(@PathVariable String id) {
         return ResponseEntity.ok(problemService.getProblemById(id));
     }
 
