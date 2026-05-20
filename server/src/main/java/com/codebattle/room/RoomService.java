@@ -249,7 +249,7 @@ public class RoomService {
     }
 
     //Find room by id
-    Room findByIdOrThrow(String id) {
+    public Room findByIdOrThrow(String id) {
         return roomRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Room not found: " + id));
