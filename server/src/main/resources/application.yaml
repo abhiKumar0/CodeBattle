@@ -29,6 +29,12 @@ spring:
 server:
   port: 8080
 
+judge0:
+  url: https://judge0-ce.p.rapidapi.com
+  api-key: ${JUDGE0_API_KEY}
+
+
+
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000

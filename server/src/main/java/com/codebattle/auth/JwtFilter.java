@@ -34,6 +34,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws ServletException, IOException {
+        String path = req.getServletPath();
+
         String header = req.getHeader("Authorization");
         logger.debug("Header is " + header);
 

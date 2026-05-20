@@ -81,7 +81,7 @@ public class ProblemService {
 
     // ─── Internal helpers ─────────────────────────────────────────────────────
 
-    Problem findOrThrow(String id) {
+   public   Problem findOrThrow(String id) {
         return problemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Problem not found: " + id));
