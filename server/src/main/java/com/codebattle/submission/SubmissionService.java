@@ -11,6 +11,7 @@ import com.codebattle.user.User;
 import com.codebattle.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -29,7 +30,8 @@ public class SubmissionService {
     private final UserRepository userRepository;
     private final ProblemService problemService;
     private final RoomService roomService;
-    private final Judge0Client judge0Client;
+//    private final Judge0Client judge0Client;
+    private final JDoodleClient jDoodleClient;
     private final SimpMessagingTemplate messagingTemplate;
 
     private static final int POLL_INTERVAL_MS = 1500;
@@ -84,13 +86,14 @@ public class SubmissionService {
                 .build());
 
         // Hand off to async thread — don't block the HTTP response
-        runJudge0Async(saved.getId(), problem, req.getCode(), req.getLanguage());
+        runJudgeAsync(saved.getId(), problem, req.getCode(), req.getLanguage());
 
         return toResponse(saved);
     }
 
     // ─── Async Judge0 execution 
 
+    /*
     @Async
     public void runJudge0Async(String submissionId, Problem problem,
                                 String code, String language) {
@@ -112,13 +115,16 @@ public class SubmissionService {
                         code, language, tc.getInput(),
                         problem.getTimeLimit(), problem.getMemoryLimit());
 
-                Judge0Client.Judge0Result result = poll(token); // check untill get the result max 20 try  and wait 1.5sec 
+                Judge0Client.Judge0Result result = poll(token); // check untill get the result max 20 try  and wait 1.5sec
+
+
 
                 if (result == null) {
                     finalStatus = SubmissionStatus.TIME_LIMIT_EXCEEDED;
                     errorMsg = "Judge timed out";
                     break;
                 }
+
 
                 // Track resource usage across all test cases
                 if (result.getTimeSeconds() != null)
@@ -144,6 +150,7 @@ public class SubmissionService {
                     finalStatus = SubmissionStatus.WRONG_ANSWER;
                     break;
                 }
+
             }
 
             updateStatus(submissionId, finalStatus, totalTimeMs, maxMemoryKb, errorMsg);
@@ -154,6 +161,112 @@ public class SubmissionService {
                     null, null, "Internal judge error: " + e.getMessage());
         }
     }
+
+    */
+
+    @Async
+    public void runJudgeAsync(String submissionId, Problem problem,
+                              String code, String language) {
+//        log.info("Running judge = {} {} {} {}", submissionId, problem.getId(), code, language);
+        try {
+            List<TestCase> testCases = problem.getTestCases();
+            if (testCases.isEmpty()) {
+                updateStatus(
+                        submissionId,
+                        SubmissionStatus.RUNTIME_ERROR,
+                        null,
+                        null,
+                        "No test cases defined for this problem"
+                );
+                return;
+            }
+
+            SubmissionStatus finalStatus = SubmissionStatus.ACCEPTED;
+            Integer totalTimeMs = 0;
+            Integer maxMemoryKb = 0;
+            String errorMsg = null;
+
+            for (TestCase tc : testCases) {
+                log.info(
+                        "TestCase id={}, input='{}', expected='{}', hidden={}",
+                        tc.getId(),
+                        tc.getInput(),
+                        tc.getExpectedOutput(),
+                        tc.isHidden()
+                );
+                String input = tc.getInput();
+                if (input != null && input.isEmpty()) {
+                    input = "\n";
+                }
+                JDoodleClient.JDoodleResult result = jDoodleClient.execute(
+                        code,
+                        language,
+                        input
+                );
+
+                if (result == null) {
+                    finalStatus = SubmissionStatus.TIME_LIMIT_EXCEEDED;
+                    errorMsg = "Judge timed out";
+                    break;
+                }
+
+                // Track max resource usage
+                if (result.getCpuTime() != null) {
+                    totalTimeMs += (int) (result.getCpuTime() * 1000);
+                }
+
+                if (result.getMemory() != null) {
+                    maxMemoryKb = Math.max(maxMemoryKb, result.getMemory());
+                }
+
+                // Compile error
+                if (result.isCompileError()) {
+                    finalStatus = SubmissionStatus.COMPILE_ERROR;
+                    errorMsg = result.getOutput();
+                    break;
+                }
+
+                // Runtime error
+                if (result.isRuntimeError()) {
+                    finalStatus = SubmissionStatus.RUNTIME_ERROR;
+                    errorMsg = result.getOutput();
+                    break;
+                }
+
+                // Output check
+                String output = result.getOutput() == null ? "" : result.getOutput();
+
+                if (!outputMatches(output, tc.getExpectedOutput())) {
+                    finalStatus = SubmissionStatus.WRONG_ANSWER;
+                    break;
+                }
+            }
+
+            updateStatus(
+                    submissionId,
+                    finalStatus,
+                    totalTimeMs,
+                    maxMemoryKb,
+                    errorMsg
+            );
+
+        } catch (Exception e) {
+            log.error(
+                    "Code execution failed for submission {}: {}",
+                    submissionId,
+                    e.getMessage()
+            );
+
+            updateStatus(
+                    submissionId,
+                    SubmissionStatus.RUNTIME_ERROR,
+                    null,
+                    null,
+                    "Internal judge error: " + e.getMessage()
+            );
+        }
+    }
+
 
     // ─── Status update + broadcast + win detection 
 
@@ -204,14 +317,14 @@ public class SubmissionService {
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /** Poll Judge0 until result is ready or MAX_POLLS exceeded */
-    private Judge0Client.Judge0Result poll(String token) throws InterruptedException {
-        for (int i = 0; i < MAX_POLLS; i++) {
-            Thread.sleep(POLL_INTERVAL_MS);
-            Judge0Client.Judge0Result result = judge0Client.getResult(token);
-            if (result != null) return result;
-        }
-        return null; // timed out
-    }
+//    private Judge0Client.Judge0Result poll(String token) throws InterruptedException {
+//        for (int i = 0; i < MAX_POLLS; i++) {
+//            Thread.sleep(POLL_INTERVAL_MS);
+////            Judge0Client.Judge0Result result = judge0Client.getResult(token);
+////            if (result != null) return result;
+//        }
+//        return null; // timed out
+//    }
 
     /** Normalize whitespace before comparing output */
     private boolean outputMatches(String actual, String expected) {

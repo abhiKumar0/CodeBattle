@@ -7,6 +7,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,19 +47,23 @@ public class Judge0Client {
     /**
      * Submits code + one test case to Judge0 and returns a token.
      * Uses base64 encoding (Judge0 default).
+     * @throws JsonProcessingException 
      */
     public String submit(String code, String language, String input,
-            int timeLimitMs, int memoryLimitMb) {
-
+            int timeLimitMs, int memoryLimitMb) throws JsonProcessingException {
+//        log.info("Api Key {}", apiKey);
+//        log.info("Submitting code {}", code);
         // find the id from the map of thelanguage use in code
         int languageId = LANGUAGE_IDS.getOrDefault(language.toLowerCase(), 62);
 
         // create json object
         Map<String, Object> body = new HashMap<>();
-        body.put("source_code", Base64.getEncoder().encodeToString(code.getBytes())); // 64 encodeing is require in
+    //    body.put("source_code", Base64.getEncoder().encodeToString(code.getBytes())); // 64 encodeing is require in
                                                                                       // judge0
+        body.put("source_code", code);
         body.put("language_id", languageId);
-        body.put("stdin", Base64.getEncoder().encodeToString(input.getBytes())); // encode the user input
+    //    body.put("stdin", Base64.getEncoder().encodeToString(input.getBytes())); // encode the user input
+        body.put("stdin", input);
         body.put("cpu_time_limit", timeLimitMs / 1000.0); // Judge0 uses seconds
         body.put("memory_limit", memoryLimitMb * 1024); // Judge0 uses KB
 
@@ -67,12 +74,17 @@ public class Judge0Client {
          * X-RapidAPI-Key: xxxx
          * X-RapidAPI-Host: judge0-ce.p.rapidapi.com
          */
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers); // combine the body and header part
+        log.info("Request body: {}", body);
+        log.info("Final URL: {}", judge0Url + "/submissions?base64_encoded=true&wait=false");
+        ObjectMapper mapper = new ObjectMapper();
+        String json = mapper.writeValueAsString(body);
+
+        HttpEntity<String> request = new HttpEntity<>(json, headers);
 
         ResponseEntity<Map> response = restTemplate.postForEntity(
-                judge0Url + "/submissions?base64_encoded=true&wait=false",
+                judge0Url + "/submissions?wait=true",
                 request,
-                Map.class); // send post request
+                Map.class);// send post request
         /*
          * 
          * (wait=false):
@@ -104,7 +116,7 @@ public class Judge0Client {
                 HttpMethod.GET,
                 request,
                 Map.class);
-
+        log.info("Rsponse = {}", response);
         Map<String, Object> body = response.getBody();
         if (body == null)
             throw new RuntimeException("Empty response from Judge0");
@@ -136,8 +148,8 @@ public class Judge0Client {
     private HttpHeaders buildHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-RapidAPI-Key", apiKey);
-        headers.set("X-RapidAPI-Host", "judge0-ce.p.rapidapi.com");
+//        headers.set("X-RapidAPI-Key", apiKey);
+//        headers.set("X-RapidAPI-Host", "judge0-ce.p.rapidapi.com");
         return headers;
     }
 
