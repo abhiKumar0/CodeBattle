@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import com.codebattle.leaderboard.LeaderboardService;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class ProblemSeeder implements CommandLineRunner {
 
     private final ProblemRepository problemRepository;
+    private final LeaderboardService leaderboardService;
 
     @Override
     @Transactional
@@ -254,6 +256,7 @@ public class ProblemSeeder implements CommandLineRunner {
 
         problemRepository.saveAll(problems);
         log.info("Seeded {} problems successfully.", problems.size());
+        leaderboardService.seedFromDatabase();
     }
 
     // ─── Builders ─────────────────────────────────────────────────────────────
