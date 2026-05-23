@@ -3,6 +3,7 @@ package com.codebattle.match;
 import com.codebattle.achievement.AchievementService;
 import com.codebattle.achievement.XpService;
 import com.codebattle.leaderboard.LeaderboardService;
+import com.codebattle.notification.EmailService;
 import com.codebattle.notification.NotificationService;
 import com.codebattle.room.Room;
 import com.codebattle.room.RoomRepository;
@@ -26,6 +27,7 @@ public class EloService {
         private final LeaderboardService leaderboardService;
         private final XpService xpService;
         private final AchievementService achievementService;
+        private final EmailService emailService;
 
         // control the rating change spped
         private static final int K_FACTOR = 32; // standard K for new/mid players
@@ -105,6 +107,26 @@ public class EloService {
                                 winner.getUsername(), true, winnerDelta, winnerNewRating);
                 notificationService.notifyMatchResult(
                                 loser.getUsername(), false, loserDelta, loserNewRating);
+
+
+            emailService.sendMatchResult(
+                    winner.getEmail(),
+                    winner.getUsername(),
+                    true,
+                    loser.getUsername(),
+                    winnerDelta,
+                    winnerNewRating
+            );
+
+            emailService.sendMatchResult(
+                    loser.getEmail(),
+                    loser.getUsername(),
+                    false,
+                    winner.getUsername(),
+                    loserDelta,
+                    loserNewRating
+            );
+
 
                 return EloResult.builder()
                                 .winnerId(winner.getId())

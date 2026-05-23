@@ -1,6 +1,7 @@
 package com.codebattle.achievement;
 
 
+import com.codebattle.notification.EmailService;
 import com.codebattle.notification.NotificationService;
 import com.codebattle.user.User;
 import com.codebattle.user.UserRepository;
@@ -22,6 +23,7 @@ public class AchievementService {
     private final UserRepository userRepository;
     private final XpService xpService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
 
     // ─── Evaluate all achievements after a match ──────────────────────────────
@@ -111,6 +113,14 @@ public class AchievementService {
                         "description", type.getDescription(),
                         "xpReward",    type.getXpReward()
                 )
+        );
+
+        emailService.sendAchievementUnlocked(
+                user.getEmail(),
+                user.getUsername(),
+                type.getTitle(),
+                type.getDescription(),
+                type.getXpReward()
         );
 
         log.info("Achievement unlocked for {}: {} (+{}xp)",

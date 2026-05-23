@@ -54,5 +54,23 @@ public class NotificationService {
         ));
     }
 
+    public void notifyChallengeReceived(String username, String challengerId,
+                                        String challengerName, String challengeId) {
+        sendToUser(username, "CHALLENGE_RECEIVED", Map.of(
+                "challengeId",    challengeId,
+                "challengerId",   challengerId,
+                "challengerName", challengerName
+        ));
+    }
+
+    public void notifyFriendRequestReceived(String username, String requesterId,
+                                            String requesterName, String friendRowId) {
+        sendToUser(username, "FRIEND_REQUEST", Map.of(
+                "friendRowId",   friendRowId,
+                "requesterId",   requesterId,
+                "requesterName", requesterName
+        ));
+    }
+
 
 }

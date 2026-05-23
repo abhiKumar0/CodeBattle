@@ -60,12 +60,12 @@ public class ChallengeService {
         Challenge saved = challengeRepository.save(challenge);
 
         // Notify challenged user via WebSocket TODO
-//        notificationService.notifyChallengeReceived(
-//                challenged.getUsername(),
-//                challengerId,
-//                challenger.getUsername(),
-//                saved.getId()
-//        );
+        notificationService.notifyChallengeReceived(
+                challenged.getUsername(),
+                challengerId,
+                challenger.getUsername(),
+                saved.getId()
+        );
 
 
         return toResponse(saved);

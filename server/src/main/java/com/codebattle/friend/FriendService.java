@@ -49,7 +49,12 @@ public class FriendService {
         Friend saved = friendRepository.save(friend);
 
         // Notify target TODO
-//        notificationService.not
+        notificationService.notifyChallengeReceived(
+                target.getUsername(),
+                requester.getId(),
+                requester.getUsername(),
+                saved.getId()
+        );
 
 
         return toResponse(saved, target);
