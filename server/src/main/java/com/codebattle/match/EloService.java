@@ -1,5 +1,7 @@
 package com.codebattle.match;
 
+import com.codebattle.achievement.AchievementService;
+import com.codebattle.achievement.XpService;
 import com.codebattle.leaderboard.LeaderboardService;
 import com.codebattle.notification.NotificationService;
 import com.codebattle.room.Room;
@@ -22,6 +24,8 @@ public class EloService {
         private final RoomRepository roomRepository;
         private final NotificationService notificationService;
         private final LeaderboardService leaderboardService;
+        private final XpService xpService;
+        private final AchievementService achievementService;
 
         // control the rating change spped
         private static final int K_FACTOR = 32; // standard K for new/mid players
@@ -74,11 +78,23 @@ public class EloService {
 
                 // update ledaerboard
                 leaderboardService.updateLeaderboard(winner.getId(), winnerNewRating, winner.getWins());
-                leaderboardService.updateLeaderboard(loser.getId(), loserNewRating, loser.getLosses());
+                leaderboardService.updateLeaderboard(loser.getId(), loserNewRating, 0);
 
                 // Increment weekly win count for winner only
                  leaderboardService.incrementWeeklyWin(winner.getId());
+                // Streak update
+                xpService.updateStreak(winner.getId(), true);
+                xpService.updateStreak(loser.getId(),  false);
 
+                // XP award updates
+                int winnerXp = xpService.awardMatchXp(winner.getId(), true);
+                int loserXp  = xpService.awardMatchXp(loser.getId(),  false);
+
+
+            achievementService.evaluatePostMatch(
+                    winner.getId(), true,  0, room.getProblem().getDifficulty().name());
+            achievementService.evaluatePostMatch(
+                    loser.getId(),  false, 0, room.getProblem().getDifficulty().name());
                 // logs the rating
                 log.info("ELO updated — winner: {} {} → {} (+{}), loser: {} {} → {} ({})",
                                 winner.getUsername(), winnerOldRating, winnerNewRating, winnerDelta,

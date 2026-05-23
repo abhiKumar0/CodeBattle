@@ -1,5 +1,6 @@
 package com.codebattle.friend;
 
+import com.codebattle.achievement.AchievementService;
 import com.codebattle.notification.NotificationService;
 import com.codebattle.user.User;
 import com.codebattle.user.UserRepository;
@@ -20,6 +21,7 @@ public class FriendService {
     private final FriendRepository friendRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    AchievementService achievementService;
 
 
     // ---- Send Request ----------------------------
@@ -71,6 +73,9 @@ public class FriendService {
 
         friend.setStatus(FriendStatus.ACCEPTED);
         Friend saved = friendRepository.save(friend);
+
+       achievementService.evaluateFriendAchievements(userId);
+       achievementService.evaluateFriendAchievements(friend.getUser().getId());
 
         //Notify the original requester
         notificationService.sendToUser(
