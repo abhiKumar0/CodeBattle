@@ -23,7 +23,7 @@ public class FriendController {
     public ResponseEntity<FriendDto.FriendResponse> sendRequest(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable String targetUserId) {
-
+        System.out.println("Sending request to friend with id: " + targetUserId);
         String userId = extractUserId(authHeader);
         return ResponseEntity.ok(friendService.sendRequest(userId, targetUserId));
     }
