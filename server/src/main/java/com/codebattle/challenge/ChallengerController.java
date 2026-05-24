@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/challenges")
 @RequiredArgsConstructor
@@ -14,6 +16,14 @@ public class ChallengerController {
     private final ChallengeService challengeService;
     private final JwtUtil jwtUtil;
 
+
+    /** GET /api/challenges/my */
+    @GetMapping("/my")
+    public ResponseEntity<List<ChallengeDto.ChallengeResponse>> getMyChallenges(
+            @RequestHeader("Authorization") String authHeader) {
+        String userId = extractUserId(authHeader);
+        return ResponseEntity.ok(challengeService.getMyChallenges(userId));
+    }
 
     /** POST /api/challenges/send/{userId} */
     @PostMapping("/send/{targetUserId}")

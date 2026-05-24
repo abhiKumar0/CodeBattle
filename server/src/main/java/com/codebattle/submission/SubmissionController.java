@@ -28,6 +28,14 @@ public class SubmissionController {
                 .body(submissionService.submit(userId, req));
     }
 
+    /** GET /api/submissions/my */
+    @GetMapping("/my")
+    public ResponseEntity<List<SubmissionDto.SubmissionResponse>> getMySubmissions(
+            @RequestHeader("Authorization") String authHeader) {
+        String userId = extractUserId(authHeader);
+        return ResponseEntity.ok(submissionService.getByUser(userId));
+    }
+
     /** GET /api/submissions/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<SubmissionDto.SubmissionResponse> getById(

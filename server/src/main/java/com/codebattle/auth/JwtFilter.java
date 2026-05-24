@@ -55,7 +55,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String userId = jwtUtil.extractUserId(token);
         logger.debug("Extracted userId: "+ userId);
         User user = userRepository.findById(userId).orElse(null);
-
+        logger.info("User found: " + user); // add this after findById
         if (user == null) {
             chain.doFilter(req, res);
             return;

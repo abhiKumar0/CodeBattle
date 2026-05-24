@@ -21,7 +21,7 @@ public class FriendService {
     private final FriendRepository friendRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    AchievementService achievementService;
+    private final AchievementService achievementService;
 
 
     // ---- Send Request ----------------------------
@@ -48,7 +48,7 @@ public class FriendService {
 
         Friend saved = friendRepository.save(friend);
 
-        // Notify target TODO
+        // Notify target
         notificationService.notifyChallengeReceived(
                 target.getUsername(),
                 requester.getId(),

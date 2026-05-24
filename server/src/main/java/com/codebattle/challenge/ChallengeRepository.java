@@ -25,4 +25,12 @@ public interface ChallengeRepository extends JpaRepository<Challenge, String> {
             AND c.status = 'PENDING'
             """)
     List<Challenge> findPendingBetween(String challengerId, String challengedId);
+
+
+    @Query("""
+    SELECT c FROM Challenge c
+    WHERE c.challenger.id = :userId OR c.challenged.id = :userId
+    ORDER BY c.createdAt DESC
+    """)
+    List<Challenge> findByUserId(String userId);
 }

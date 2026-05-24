@@ -9,6 +9,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
 
   data:
     redis:
@@ -46,3 +51,9 @@ jdoodle:
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
+
+
+logging:
+  level:
+    com.codebattle: DEBUG
+    org.springframework.web: DEBUG

@@ -301,6 +301,13 @@ public class SubmissionService {
         }
     }
 
+
+
+    public List<SubmissionDto.SubmissionResponse> getByUser(String userId) {
+        return submissionRepository.findByUserIdOrderBySubmittedAtDesc(userId)
+                .stream().map(this::toResponse).toList();
+    }
+
     // ─── Queries 
 
     public SubmissionDto.SubmissionResponse getById(String id) {

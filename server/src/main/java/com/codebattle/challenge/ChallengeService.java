@@ -45,7 +45,7 @@ public class ChallengeService {
         //Block Duplicate pending challenges
         List<Challenge> existing = challengeRepository.findPendingBetween(challengerId, challengedId);
 
-        if (existing.isEmpty()) {
+        if (!existing.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "A pending challenge already exists");
         }
@@ -170,6 +170,16 @@ public class ChallengeService {
             challengeRepository.saveAll(expired);
             log.info("Expired {} challenges", expired.size());
         }
+    }
+
+
+
+    // ---- My Challenged ---------------------
+    public List<ChallengeDto.ChallengeResponse> getMyChallenges(String userId) {
+        return challengeRepository.findByUserId(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
 
