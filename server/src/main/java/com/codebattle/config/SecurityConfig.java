@@ -45,7 +45,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/achievements/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
-                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
