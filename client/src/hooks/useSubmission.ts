@@ -6,14 +6,8 @@ import { SubmissionResponse, Language } from "@/types";
 
 export function useSubmit() {
   const { setSubmitting } = useRoomStore();
-
   return useMutation({
-    mutationFn: (data: {
-      roomId: string;
-      problemId: string;
-      code: string;
-      language: Language;
-    }) =>
+    mutationFn: (data: { roomId: string; problemId: string; code: string; language: Language }) =>
       api.post<SubmissionResponse>("/api/submissions", data).then((r) => r.data),
     onMutate: () => setSubmitting(true),
     onSettled: () => setSubmitting(false),
@@ -26,9 +20,14 @@ export function useRoomSubmissions(roomId: string) {
   return useQuery({
     queryKey: ["submissions", "room", roomId],
     queryFn: () =>
-      api
-        .get<SubmissionResponse[]>(`/api/submissions/room/${roomId}`)
-        .then((r) => r.data),
+      api.get<SubmissionResponse[]>(`/api/submissions/room/${roomId}`).then((r) => r.data),
     enabled: !!roomId,
+  });
+}
+
+export function useMySubmissions() {
+  return useQuery({
+    queryKey: ["submissions", "my"],
+    queryFn: () => api.get<SubmissionResponse[]>("/api/submissions/my").then((r) => r.data),
   });
 }

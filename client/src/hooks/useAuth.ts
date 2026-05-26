@@ -9,7 +9,6 @@ import { AuthResponse, LoginRequest, RegisterRequest } from "@/types";
 export function useLogin() {
   const { setAuth } = useAuthStore();
   const router = useRouter();
-
   return useMutation({
     mutationFn: (data: LoginRequest) =>
       api.post<AuthResponse>("/api/auth/login", data).then((r) => r.data),
@@ -26,7 +25,6 @@ export function useLogin() {
 export function useRegister() {
   const { setAuth } = useAuthStore();
   const router = useRouter();
-
   return useMutation({
     mutationFn: (data: RegisterRequest) =>
       api.post<AuthResponse>("/api/auth/register", data).then((r) => r.data),
@@ -43,7 +41,6 @@ export function useRegister() {
 export function useLogout() {
   const { clearAuth } = useAuthStore();
   const router = useRouter();
-
   return () => {
     disconnectStomp();
     clearAuth();
