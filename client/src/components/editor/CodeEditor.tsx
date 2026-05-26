@@ -5,11 +5,7 @@ import { useTheme } from "next-themes";
 import { Language } from "@/types";
 
 const MONACO_LANGUAGE_MAP: Record<Language, string> = {
-  java:       "java",
-  python:     "python",
-  cpp:        "cpp",
-  javascript: "javascript",
-  c:          "c",
+  java: "java", python: "python", cpp: "cpp", javascript: "javascript", c: "c",
 };
 
 interface Props {
@@ -21,7 +17,6 @@ interface Props {
 
 export default function CodeEditor({ language, value, onChange, readOnly = false }: Props) {
   const { resolvedTheme } = useTheme();
-
   return (
     <Editor
       height="100%"
@@ -30,15 +25,10 @@ export default function CodeEditor({ language, value, onChange, readOnly = false
       onChange={onChange}
       theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
       options={{
-        fontSize: 14,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        readOnly,
-        tabSize: 4,
-        wordWrap: "on",
-        lineNumbers: "on",
-        renderLineHighlight: "all",
-        automaticLayout: true,
+        fontSize: 14, minimap: { enabled: false },
+        scrollBeyondLastLine: false, readOnly,
+        tabSize: 4, wordWrap: "on", lineNumbers: "on",
+        renderLineHighlight: "all", automaticLayout: true,
       }}
     />
   );
