@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Swords, X, Plus, Hash } from "lucide-react";
+import { Swords, X, Plus, Hash, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { connectStomp, subscribeToNotifications } from "@/lib/ws";
 import { useMatchStore } from "@/store/matchStore";
 import { useAuthStore } from "@/store/authStore";
 import { useJoinRoom } from "@/hooks/useRoom";
-import { MatchResponse, Notification } from "@/types";
+import { MatchResponse, Notification, RoomResponse } from "@/types";
 
 export default function RandomMatchPage() {
   const router = useRouter();
@@ -26,6 +26,14 @@ export default function RandomMatchPage() {
     return () => clearInterval(id);
   }, [status]);
 
+  // ── Check if user already has an open room ──────────────────────────────────
+  const { data: myActiveRoom } = useQuery({
+    queryKey: ["room", "my-active"],
+    queryFn: () => api.get<RoomResponse>("/api/rooms/my-active").then((r) => r.data),
+    retry: false,
+  });
+
+  // ── Join matchmaking queue ──────────────────────────────────────────────────
   const { mutate: joinQueue, isPending } = useMutation({
     mutationFn: () => api.post<MatchResponse>("/api/match/random").then((r) => r.data),
     onSuccess: (data) => {
@@ -38,16 +46,46 @@ export default function RandomMatchPage() {
         router.push(`/room/${data.roomCode}`);
       }
     },
-    onError: () => toast.error("Failed to join queue"),
+    onError: (error: any) => {
+      const msg: string = error?.response?.data?.error ?? "";
+      // 409 — user already has an active/waiting room
+      const match = msg.match(/active room\s*([A-Z0-9]{4,8})/i);
+      if (match) {
+        toast.error("You already have an active room. Redirecting...");
+        router.push(`/room/${match[1]}`);
+      } else {
+        toast.error("Failed to join queue");
+      }
+    },
   });
 
+  // ── Cancel matchmaking ──────────────────────────────────────────────────────
   const { mutate: cancelQueue } = useMutation({
     mutationFn: () => api.delete("/api/match/cancel"),
     onSuccess: () => { reset(); subRef.current?.unsubscribe(); },
   });
 
+  // ── Join by room code ───────────────────────────────────────────────────────
   const { mutate: joinRoom, isPending: joiningRoom } = useJoinRoom();
 
+  // ── Create a private room ───────────────────────────────────────────────────
+  const { mutate: createRoom, isPending: creating } = useMutation({
+    mutationFn: () => api.post<RoomResponse>("/api/rooms/create", {}).then((r) => r.data),
+    onSuccess: (room) => router.push(`/room/${room.code}`),
+    onError: (error: any) => {
+      const msg: string = error?.response?.data?.error ?? "";
+      const match = msg.match(/active room\s*([A-Z0-9]{4,8})/i);
+      if (match) {
+        // Already have a room — show code and offer to go there
+        toast.error(`You already have room ${match[1]}. Redirecting...`);
+        router.push(`/room/${match[1]}`);
+      } else {
+        toast.error("Failed to create room");
+      }
+    },
+  });
+
+  // ── WebSocket: MATCH_FOUND notification ────────────────────────────────────
   useEffect(() => {
     if (status !== "WAITING" || !token) return;
     connectStomp(token).then(() => {
@@ -72,7 +110,34 @@ export default function RandomMatchPage() {
       </div>
 
       <div className="w-full max-w-md space-y-4">
-        {/* Main battle card */}
+
+        {/* ── Existing open room banner ── */}
+        {myActiveRoom && (
+          <div className="cb-card p-4 border-yellow-500/30 bg-yellow-500/5 relative">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-yellow-500/40 to-transparent" />
+            <p className="font-mono text-xs text-yellow-500 tracking-widest mb-2">
+              // YOU HAVE AN OPEN ROOM
+            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-mono text-2xl font-bold text-yellow-400 tracking-widest">
+                  {myActiveRoom.code}
+                </span>
+                <p className="font-mono text-xs text-muted-foreground mt-1">
+                  Status: {myActiveRoom.status}
+                </p>
+              </div>
+              <button
+                onClick={() => router.push(`/room/${myActiveRoom.code}`)}
+                className="btn-primary flex items-center gap-2 px-4"
+                style={{ borderColor: "rgba(234,179,8,.5)", color: "#eab308" }}>
+                REJOIN <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Quick Match card ── */}
         <div className="cb-card corner-tl p-8 text-center relative">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/40 to-transparent" />
 
@@ -87,7 +152,10 @@ export default function RandomMatchPage() {
               <p className="font-mono text-xs text-muted-foreground tracking-wider mb-8">
                 MATCHMAKING BY ELO RATING
               </p>
-              <button onClick={() => joinQueue()} disabled={isPending} className="btn-primary w-full text-sm">
+              <button
+                onClick={() => joinQueue()}
+                disabled={isPending}
+                className="btn-primary w-full text-sm">
                 {isPending ? "CONNECTING..." : "FIND OPPONENT →"}
               </button>
             </>
@@ -96,23 +164,33 @@ export default function RandomMatchPage() {
           {status === "WAITING" && (
             <>
               <div className="relative inline-flex items-center justify-center w-24 h-24 mb-6">
-                <div className="absolute inset-0 border-2 border-green-500/40 rotate-45 animate-spin" style={{ animationDuration: "4s" }} />
-                <div className="absolute inset-3 border border-green-500/20 -rotate-45 animate-spin" style={{ animationDuration: "3s", animationDirection: "reverse" }} />
+                <div className="absolute inset-0 border-2 border-green-500/40 rotate-45 animate-spin"
+                  style={{ animationDuration: "4s" }} />
+                <div className="absolute inset-3 border border-green-500/20 -rotate-45 animate-spin"
+                  style={{ animationDuration: "3s", animationDirection: "reverse" }} />
                 <Swords size={36} className="text-green-400 relative z-10 animate-pulse" />
               </div>
-              <h2 className="font-display text-2xl font-bold text-green-400 tracking-wider mb-2">SEARCHING{dots}</h2>
-              <p className="font-mono text-xs text-muted-foreground mb-2">{message || "SCANNING FOR OPPONENTS"}</p>
+              <h2 className="font-display text-2xl font-bold text-green-400 tracking-wider mb-2">
+                SEARCHING{dots}
+              </h2>
+              <p className="font-mono text-xs text-muted-foreground mb-1">
+                {message || "SCANNING FOR OPPONENTS"}
+              </p>
               {queueSize > 0 && (
-                <p className="font-mono text-xs text-green-500/70 mb-6">{queueSize} OPERATOR{queueSize !== 1 ? "S" : ""} IN QUEUE</p>
+                <p className="font-mono text-xs text-green-500/70 mb-6">
+                  {queueSize} OPERATOR{queueSize !== 1 ? "S" : ""} IN QUEUE
+                </p>
               )}
-              <button onClick={() => cancelQueue()} className="btn-secondary w-full flex items-center justify-center gap-2">
+              <button
+                onClick={() => cancelQueue()}
+                className="btn-secondary w-full flex items-center justify-center gap-2">
                 <X size={12} /> CANCEL SEARCH
               </button>
             </>
           )}
         </div>
 
-        {/* Join by code */}
+        {/* ── Join by code ── */}
         <div className="cb-card p-5">
           <p className="font-mono text-xs text-muted-foreground tracking-widest mb-3 flex items-center gap-2">
             <Hash size={11} /> JOIN BY ROOM CODE
@@ -126,22 +204,28 @@ export default function RandomMatchPage() {
               maxLength={6}
               className="cb-input uppercase font-mono tracking-widest text-center text-green-400"
             />
-            <button onClick={() => roomCode && joinRoom(roomCode)} disabled={joiningRoom || !roomCode}
+            <button
+              onClick={() => roomCode && joinRoom(roomCode)}
+              disabled={joiningRoom || !roomCode}
               className="btn-primary flex items-center gap-1.5 shrink-0 px-4">
               <Plus size={12} /> JOIN
             </button>
           </div>
         </div>
 
-        {/* Create private room */}
+        {/* ── Create private room ── */}
         <div className="cb-card p-5">
-          <p className="font-mono text-xs text-muted-foreground tracking-widest mb-3">// CREATE PRIVATE ROOM</p>
+          <p className="font-mono text-xs text-muted-foreground tracking-widest mb-3">
+            // CREATE PRIVATE ROOM
+          </p>
           <button
-            onClick={() => api.post("/api/rooms/create", {}).then((r: any) => router.push(`/room/${r.data.code}`))}
+            onClick={() => createRoom()}
+            disabled={creating}
             className="btn-secondary w-full">
-            INITIALIZE ROOM
+            {creating ? "INITIALIZING..." : "INITIALIZE ROOM"}
           </button>
         </div>
+
       </div>
     </div>
   );

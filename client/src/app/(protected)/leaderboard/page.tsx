@@ -23,7 +23,7 @@ export default function LeaderboardPage() {
     <div className="max-w-2xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="animate-fade-up">
-        <p className="font-mono text-xs text-green-500 tracking-widest">// GLOBAL ARENA</p>
+        {/* <p className="font-mono text-xs text-green-500 tracking-widest">// GLOBAL ARENA</p> */}
         <h1 className="font-display text-4xl font-bold mt-1 flex items-center gap-3">
           <Trophy className="text-yellow-400" size={32} />
           RANKINGS

@@ -41,7 +41,7 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div className="animate-fade-up">
-        <p className="font-mono text-xs text-green-500 tracking-widest">// WELCOME BACK</p>
+        <p className="font-mono text-xs text-green-500 tracking-widest"> WELCOME BACK</p>
         <h1 className="font-display text-4xl font-bold mt-1">
           <span className="text-green-400">{username}</span>
           <span className="text-muted-foreground text-2xl ml-2 font-mono animate-blink">_</span>

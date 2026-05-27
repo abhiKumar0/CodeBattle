@@ -32,7 +32,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <p className="font-mono text-xs text-green-500 tracking-widest animate-fade-up">// OPERATOR PROFILE</p>
+      {/* <p className="font-mono text-xs text-green-500 tracking-widest animate-fade-up">// OPERATOR PROFILE</p> */}
 
       {/* Profile header */}
       <div className="cb-card corner-tl p-6 relative animate-fade-up">

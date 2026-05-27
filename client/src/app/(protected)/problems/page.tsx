@@ -26,7 +26,7 @@ export default function ProblemsPage() {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <div className="animate-fade-up">
-        <p className="font-mono text-xs text-green-500 tracking-widest">// PROBLEM ARCHIVE</p>
+        {/* <p className="font-mono text-xs text-green-500 tracking-widest">// PROBLEM ARCHIVE</p> */}
         <h1 className="font-display text-4xl font-bold mt-1 flex items-center gap-3">
           <Terminal className="text-green-400" size={30} />
           ARENA
@@ -38,12 +38,19 @@ export default function ProblemsPage() {
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap animate-fade-up">
-        <div className="relative flex-1 min-w-48">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="SEARCH PROBLEMS..."
-            className="cb-input pl-8" />
-        </div>
+      <div className="relative flex-1 min-w-48">
+  <Search
+    size={16}
+    className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10"
+  />
+
+  <input
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    placeholder="SEARCH PROBLEMS..."
+    className="cb-input w-full h-12 !pl-14 !pr-4"
+  />
+</div>
         <div className="flex gap-1.5">
           {(["ALL", "EASY", "MEDIUM", "HARD"] as const).map((d) => (
             <button key={d} onClick={() => setDiff(d)}

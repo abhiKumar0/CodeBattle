@@ -1,11 +1,7 @@
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export interface AuthResponse {
-  token: string;
-  userId: string;
-  username: string;
-  email: string;
-  rating: number;
-  role: string;
+  token: string; userId: string; username: string;
+  email: string; rating: number; role: string;
 }
 export interface RegisterRequest { username: string; email: string; password: string; }
 export interface LoginRequest { email: string; password: string; }
@@ -16,18 +12,22 @@ export interface UserProfile {
   wins: number; losses: number; xp: number; streak: number;
   role: string; createdAt: string;
 }
+export interface UserSearchResult { id: string; username: string; rating: number; }
 
 // ─── Problem ──────────────────────────────────────────────────────────────────
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 export interface ProblemSummary {
-  id: string; title: string; difficulty: Difficulty; topic: string; isDaily: boolean;
+  id: string; title: string; difficulty: Difficulty;
+  topic: string; tags: string[]; isDaily: boolean;
 }
 export interface TestCase { id: string; input: string; expectedOutput: string; }
 export interface ProblemDetail {
-  id: string; title: string; difficulty: Difficulty; description: string;
-  inputFormat: string; outputFormat: string; constraints: string;
-  timeLimit: number; memoryLimit: number; isDaily: boolean;
-  topic: string; createdAt: string; sampleTestCases: TestCase[];
+  id: string; title: string; difficulty: Difficulty;
+  description: string; inputFormat: string; outputFormat: string;
+  constraints: string; note?: string; scoring?: string;
+  timeLimit: number; memoryLimit: number;
+  isDaily: boolean; topic: string; tags: string[];
+  createdAt: string; sampleTestCases: TestCase[];
 }
 
 // ─── Room ─────────────────────────────────────────────────────────────────────
@@ -98,7 +98,8 @@ export interface ChallengeResponse {
 
 // ─── WebSocket Events ─────────────────────────────────────────────────────────
 export interface RoomEvent {
-  type: "OPPONENT_JOINED" | "PLAYER_READY" | "MATCH_STARTED" | "MATCH_ENDED" | "PONG" | "TYPING";
+  type: "OPPONENT_JOINED" | "PLAYER_READY" | "MATCH_STARTED" | "MATCH_ENDED"
+      | "ROOM_CLOSED" | "PONG" | "TYPING";
   payload: unknown;
 }
 export interface SubmissionEvent {

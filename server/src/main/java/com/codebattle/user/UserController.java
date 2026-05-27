@@ -4,6 +4,7 @@ import com.codebattle.auth.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -28,4 +29,19 @@ public class UserController {
             @PathVariable String username) {
         return ResponseEntity.ok(userService.getProfileByUsername(username));
     }
+     /**
+     * GET /api/users/search?q=prefix
+     * Returns up to 10 users whose username starts with the given prefix.
+     * Used for friend search autocomplete.
+     */
+     @GetMapping("/search")
+     public ResponseEntity<List<UserSearchDto>> searchUsers(
+             @RequestHeader("Authorization") String authHeader,
+             @RequestParam("q") String query) {
+         String myId = extractUserId(authHeader);
+         return ResponseEntity.ok(userService.searchByUsername(query, myId));
+     }
+     private String extractUserId(String authHeader) {
+        return jwtUtil.extractUserId(authHeader.replace("Bearer ", "").trim());
+    } 
 }
