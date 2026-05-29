@@ -45,6 +45,77 @@ public class EmailService {
     }
 
 
+    // ─── Email verification ───────────────────────────────────────────────────
+
+    public void sendVerificationEmail(String to, String username, String token) {
+        String verifyUrl = frontendUrl + "/auth/verify-email?token=" + token;
+        String subject = "Verify your email — CodeBattle";
+        String body = """
+                <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;
+                            background:#1a1a2e;border-radius:8px;padding:32px;color:#e0e0e0">
+                  <div style="text-align:center;margin-bottom:24px">
+                    <span style="font-size:36px">⚔️</span>
+                    <h2 style="color:#22c55e;margin:8px 0 0;letter-spacing:2px">CODEBATTLE</h2>
+                  </div>
+                  <p style="color:#ccc">Hey <strong style="color:#22c55e">%s</strong>,</p>
+                  <p style="color:#aaa">You're almost ready to enter the arena. Click the button below to verify
+                     your email and activate your account.</p>
+                  <div style="text-align:center;margin:28px 0">
+                    <a href="%s"
+                       style="background:#22c55e;color:#0a0a0a;padding:14px 32px;
+                              border-radius:6px;text-decoration:none;display:inline-block;
+                              font-weight:bold;font-size:14px;letter-spacing:1px">
+                      VERIFY EMAIL
+                    </a>
+                  </div>
+                  <p style="color:#666;font-size:12px;text-align:center">
+                    This link expires in 15 minutes. If you didn't request this, just ignore this email.
+                  </p>
+                  <hr style="border:none;border-top:1px solid #2a2a3e;margin:24px 0"/>
+                  <p style="color:#555;font-size:11px;text-align:center">
+                    CodeBattle — sharpen your skills, one battle at a time.
+                  </p>
+                </div>
+                """.formatted(username, verifyUrl);
+        sendHtml(to, subject, body);
+    }
+
+    // ─── Password reset email ─────────────────────────────────────────────────
+
+    public void sendPasswordReset(String to, String username, String token) {
+        String resetUrl = frontendUrl + "/auth/reset-password?token=" + token;
+        String subject = "Reset your password — CodeBattle";
+        String body = """
+                <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;
+                            background:#1a1a2e;border-radius:8px;padding:32px;color:#e0e0e0">
+                  <div style="text-align:center;margin-bottom:24px">
+                    <span style="font-size:36px">🔑</span>
+                    <h2 style="color:#22c55e;margin:8px 0 0;letter-spacing:2px">CODEBATTLE</h2>
+                  </div>
+                  <p style="color:#ccc">Hey <strong style="color:#22c55e">%s</strong>,</p>
+                  <p style="color:#aaa">We received a request to reset your password.
+                     Click the button below to choose a new one.</p>
+                  <div style="text-align:center;margin:28px 0">
+                    <a href="%s"
+                       style="background:#22c55e;color:#0a0a0a;padding:14px 32px;
+                              border-radius:6px;text-decoration:none;display:inline-block;
+                              font-weight:bold;font-size:14px;letter-spacing:1px">
+                      RESET PASSWORD
+                    </a>
+                  </div>
+                  <p style="color:#666;font-size:12px;text-align:center">
+                    This link expires in 15 minutes. If you didn't request this, you can safely ignore it.
+                  </p>
+                  <hr style="border:none;border-top:1px solid #2a2a3e;margin:24px 0"/>
+                  <p style="color:#555;font-size:11px;text-align:center">
+                    CodeBattle — sharpen your skills, one battle at a time.
+                  </p>
+                </div>
+                """.formatted(username, resetUrl);
+        sendHtml(to, subject, body);
+    }
+
+
     // ─── Welcome email ────────────────────────────────────────────────────────
 
     public void sendWelcome(String to, String username) {

@@ -58,8 +58,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-border text-center">
+          <div className="mt-2 pt-2 text-center">
             <p className="font-mono text-xs text-muted-foreground">
+              Forgot Password?{" "}
+              <Link href="/auth/forgot-password" className="text-green-400 hover:text-green-300 transition-colors">
+                Reset Password
+              </Link>
+            </p>
+            <p className="mt-4 pt-4 border-t border-border text-center font-mono text-xs text-muted-foreground">
               NO ACCOUNT?{" "}
               <Link href="/auth/register" className="text-green-400 hover:text-green-300 transition-colors">
                 REGISTER
