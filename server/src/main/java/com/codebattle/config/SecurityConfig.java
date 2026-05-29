@@ -2,6 +2,7 @@ package com.codebattle.config;
 
 import com.codebattle.auth.JwtFilter;
 import com.codebattle.auth.JwtUtil;
+import com.codebattle.auth.OAuth2AuthenticationSuccessHandler;
 import com.codebattle.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,16 +28,20 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+//    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtFilter jwtFilter, OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {
                 })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/api/auth/**").permitAll()
+                        .requestMatchers("/", "/api/auth/**", "/login/oauth2/**", "/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/problems/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/problems").hasRole("ADMIN")
                         .requestMatchers("/api/rooms/**").authenticated()

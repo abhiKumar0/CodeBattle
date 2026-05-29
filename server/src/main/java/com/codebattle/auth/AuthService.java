@@ -115,7 +115,7 @@ public class AuthService {
 
         emailService.sendWelcome(user.getEmail(), user.getUsername());
         String jwt = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(jwt, user.getId(), user.getUsername(), user.getEmail());
+        return new AuthResponse(jwt, user.getId(), user.getUsername(), user.getEmail(), user.getRating(), user.getRole().name());
     }
 
     // ─── Resend verification email ───────────────────────────────────────────
@@ -156,7 +156,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail());
+        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getRating(), user.getRole().name());
     }
 
     // ─── Forgot password ─────────────────────────────────────────────────────
