@@ -17,14 +17,17 @@ public class ProblemDto {
     public static class CreateRequest {
         private String title;
         private Difficulty difficulty;
+        private String topic;
+        private String tags; // Comma separated
         private String description;
         private String inputFormat;
         private String outputFormat;
         private String constraints;
+        private String note;
+        private String scoring;
         private int timeLimit;
         private int memoryLimit;
         private boolean isDaily;
-        private String topic;
         private List<TestCaseRequest> testCases;
     }
 
@@ -46,14 +49,17 @@ public class ProblemDto {
         private String id;
         private String title;
         private Difficulty difficulty;
+        private String topic;
+        private List<String> tags;
         private String description;
         private String inputFormat;
         private String outputFormat;
         private String constraints;
+        private String note;
+        private String scoring;
         private int timeLimit;
         private int memoryLimit;
         private boolean isDaily;
-        private String topic;
         private LocalDateTime createdAt;
         private List<TestCaseResponse> sampleTestCases; // only visible ones
     }
@@ -66,6 +72,7 @@ public class ProblemDto {
         private String title;
         private Difficulty difficulty;
         private String topic;
+        private List<String> tags;
         private boolean isDaily;
     }
 

@@ -19,6 +19,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -65,6 +66,30 @@ public class RoomService {
                 .build();
 
         return toResponse(roomRepository.save(room));
+    }
+
+
+//    ----- Close ROom --------
+
+    @Transactional
+    public void closeRoom(String roomId, String userId) {
+        Room room = findByIdOrThrow(roomId);
+
+        if (!room.getCreator().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only the room creator can close it");
+        }
+        if (room.getStatus() == RoomStatus.FINISHED || room.getStatus() == RoomStatus.EXPIRED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Room is already closed");
+        }
+
+        room.setStatus(RoomStatus.EXPIRED);
+        room.setEndedAt(LocalDateTime.now());
+        roomRepository.save(room);
+
+        // Notify anyone who might be in the lobby
+        broadcast(roomId, "ROOM_CLOSED", Map.of("reason", "Host closed the room"));
     }
 
 
@@ -145,7 +170,14 @@ public class RoomService {
     }
 
 
-    // ---- Getters -------
+    // ---- Get My Active Rooms -------
+
+    public Optional<RoomDto.RoomResponse> getMyActiveRoom(String userId) {
+        return roomRepository.findAnyOpenRoomForUser(userId).map(this::toResponse);
+    }
+
+
+        // ---- Getters -------
 
     public RoomDto.RoomResponse getRoomById(String id) {
         return toResponse(findByIdOrThrow(id));

@@ -29,4 +29,12 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findActiveRoomForUser(String userId);
 
 
+    @Query("""
+            SELECT r FROM Room r
+            WHERE r.status IN ('CREATED', 'WAITING', 'ACTIVE')
+            AND (r.creator.id = :userId OR r.opponent.id = :userId)
+            ORDER BY r.createdAt DESC
+            """)
+    Optional<Room> findAnyOpenRoomForUser(String userId);
+
 }

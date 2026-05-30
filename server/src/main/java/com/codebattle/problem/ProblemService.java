@@ -93,6 +93,7 @@ public class ProblemService {
                 .title(p.getTitle())
                 .difficulty(p.getDifficulty())
                 .topic(p.getTopic())
+                .topic(p.getTags())
                 .isDaily(p.isDaily())
                 .build();
     }
@@ -115,10 +116,13 @@ public class ProblemService {
                 .inputFormat(p.getInputFormat())
                 .outputFormat(p.getOutputFormat())
                 .constraints(p.getConstraints())
+                .constraints(p.getNote())
+                .constraints(p.getScoring())
+                .topic(p.getTopic())
+                .topic(p.getTags())
                 .timeLimit(p.getTimeLimit())
                 .memoryLimit(p.getMemoryLimit())
                 .isDaily(p.isDaily())
-                .topic(p.getTopic())
                 .createdAt(p.getCreatedAt())
                 .sampleTestCases(samples)
                 .build();

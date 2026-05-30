@@ -39,6 +39,15 @@ public class Problem {
     @Column(columnDefinition = "TEXT")
     private String constraints;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
+    @Column(columnDefinition = "TEXT")
+    private String scoring;
+
+    @Column(columnDefinition = "TEXT")
+    private String tags; // Comma separated
+
     // Time limit in milliseconds
     @Builder.Default // use4 to use the inilaized value of the variable  in builder
     private int timeLimit = 2000;

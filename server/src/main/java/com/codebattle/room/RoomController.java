@@ -58,6 +58,29 @@ public class RoomController {
         return ResponseEntity.ok(roomService.setReady(id, userId));
     }
 
+
+    /** DELETE /api/rooms/{id}/close  — creator closes their own room */
+    @DeleteMapping("/{id}/close")
+    public ResponseEntity<Void> closeRoom(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id) {
+        String userId = extractUserId(authHeader);
+        roomService.closeRoom(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    /** GET /api/rooms/my-active — returns current user's active/waiting/created room if any */
+    @GetMapping("/my-active")
+    public ResponseEntity<?> getMyActiveRoom(
+            @RequestHeader("Authorization") String authHeader) {
+        String userId = extractUserId(authHeader);
+        return roomService.getMyActiveRoom(userId)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
+
     /**
      * GET /api/rooms/{id}
      */
