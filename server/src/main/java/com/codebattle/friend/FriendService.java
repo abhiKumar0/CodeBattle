@@ -17,27 +17,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FriendService {
 
+    private final FriendRepository     friendRepository;
+    private final UserRepository       userRepository;
+    private final NotificationService  notificationService;
+    private final AchievementService   achievementService;
 
-    private final FriendRepository friendRepository;
-    private final UserRepository userRepository;
-    private final NotificationService notificationService;
-    private final AchievementService achievementService;
-
-
-    // ---- Send Request ----------------------------
-
+    // ── Send Request ──────────────────────────────────────────────────────────
     @Transactional
     public FriendDto.FriendResponse sendRequest(String requestedId, String targetUserId) {
-        if (requestedId.equals(targetUserId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot send friend request to yourself");
-        }
+        if (requestedId.equals(targetUserId))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot send friend request to yourself");
 
         User requester = findUserOrThrow(requestedId);
-        User target = findUserOrThrow(targetUserId);
+        User target    = findUserOrThrow(targetUserId);
 
-        //Already has a row between these two user
-        friendRepository.findBetween(requestedId, targetUserId).ifPresent(friend -> {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Friend request already exists (status: " + friend.getStatus() + ")");
+        friendRepository.findBetween(requestedId, targetUserId).ifPresent(f -> {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Friend request already exists (status: " + f.getStatus() + ")");
         });
 
         Friend friend = Friend.builder()
@@ -45,94 +42,64 @@ public class FriendService {
                 .friend(target)
                 .status(FriendStatus.PENDING)
                 .build();
-
         Friend saved = friendRepository.save(friend);
 
-        // Notify target
-        notificationService.notifyChallengeReceived(
-                target.getUsername(),
-                requester.getId(),
-                requester.getUsername(),
-                saved.getId()
-        );
-
+        // FIX: use notifyFriendRequest, not notifyChallengeReceived
+        notificationService.notifyFriendRequest(target.getId(), requester.getUsername());
 
         return toResponse(saved, target);
     }
 
-
-
-    // ---- Accept -----------------------------
-
-
+    // ── Accept ────────────────────────────────────────────────────────────────
     @Transactional
     public FriendDto.FriendResponse acceptRequest(String userId, String requesterId) {
-        //Get request and if not throw exception
-        Friend friend = friendRepository.findBetween(requesterId, userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Friend request not found"));
+        Friend friend = friendRepository.findBetween(requesterId, userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Friend request not found"));
 
-
-        if (friend.getStatus() != FriendStatus.PENDING) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Request is not pending");
-        }
+        if (friend.getStatus() != FriendStatus.PENDING)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request is not pending");
 
         friend.setStatus(FriendStatus.ACCEPTED);
         Friend saved = friendRepository.save(friend);
 
-       achievementService.evaluateFriendAchievements(userId);
-       achievementService.evaluateFriendAchievements(friend.getUser().getId());
+        achievementService.evaluateFriendAchievements(userId);
+        achievementService.evaluateFriendAchievements(friend.getUser().getId());
 
-        //Notify the original requester
-        notificationService.sendToUser(
-                friend.getUser().getUsername(),
-                "FRIEND_ACCEPTED",
-                Map.of("userId", userId,
-                        "username", friend.getUser().getUsername())
+        // FIX: use notifyFriendAccepted, not sendToUser
+        notificationService.notifyFriendAccepted(
+                friend.getUser().getId(),
+                friend.getFriend().getUsername()
         );
-
 
         return toResponse(saved, friend.getUser());
     }
 
-
-    // ---- Remove / Unfriend -------------------------
-
-
+    // ── Remove ────────────────────────────────────────────────────────────────
     public void removeFriend(String userId, String friendUserId) {
         Friend friend = friendRepository.findBetween(userId, friendUserId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Friend relationship not found"));
-
         friendRepository.delete(friend);
     }
 
-
-    // ─── List friends ─────────────────────────────────────────────────────────
-
+    // ── Queries ───────────────────────────────────────────────────────────────
     public List<FriendDto.FriendResponse> getFriends(String userId) {
-        return friendRepository.findAcceptedFriends(userId)
-                .stream()
+        return friendRepository.findAcceptedFriends(userId).stream()
                 .map(f -> {
-                    // Return the other user's info
                     User other = f.getUser().getId().equals(userId)
-                            ? f.getFriend()
-                            : f.getUser();
+                            ? f.getFriend() : f.getUser();
                     return toResponse(f, other);
-                })
-                .toList();
+                }).toList();
     }
 
     public List<FriendDto.FriendResponse> getPendingRequests(String userId) {
-        return friendRepository.findPendingRequests(userId)
-                .stream()
+        return friendRepository.findPendingRequests(userId).stream()
                 .map(f -> toResponse(f, f.getUser()))
                 .toList();
     }
 
-
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-
+    // ── Helpers ───────────────────────────────────────────────────────────────
     private User findUserOrThrow(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(

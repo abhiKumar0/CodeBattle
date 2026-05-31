@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Swords, Trophy, LayoutDashboard, LogOut, Users, BookOpen, User } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useLogout } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
+import NotificationPanel from "@/components/layout/NotificationPanel";
 
 const NAV_LINKS = [
   { href: "/dashboard",    label: "Dashboard",  icon: LayoutDashboard },
@@ -18,6 +20,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const { username, rating } = useAuthStore();
   const logout = useLogout();
+  // Initialize notification fetching + WebSocket subscription
+  useNotifications();
 
   return (
     <nav className="sticky top-0 z-50 h-12 border-b border-border bg-card/90 backdrop-blur-sm flex items-center px-4 gap-4"
@@ -59,6 +63,8 @@ export default function Navbar() {
         <Link href="/profile" className="p-1.5 text-muted-foreground hover:text-green-400 transition-colors">
           <User size={14} />
         </Link>
+          {/* 🔔 Notification bell with panel */}
+          <NotificationPanel />
         <button onClick={logout} className="p-1.5 text-muted-foreground hover:text-red-400 transition-colors" title="Logout">
           <LogOut size={14} />
         </button>
