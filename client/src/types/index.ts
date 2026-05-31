@@ -9,9 +9,23 @@ export interface MessageResponse { message: string; }
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 export interface UserProfile {
-  id: string; username: string; email: string; rating: number;
+  id: string; username: string; displayName: string | null; email?: string; rating: number;
   wins: number; losses: number; xp: number; streak: number;
-  role: string; createdAt: string;
+  role: string; bio: string | null; profilePictureUrl: string | null;
+  createdAt: string; lastUsernameChangeAt: string | null;
+}
+export interface ProfileUpdateRequest {
+  username?: string; displayName?: string; bio?: string;
+}
+export interface BattleHistoryEntry {
+  roomId: string; roomCode: string; opponentUsername: string;
+  opponentProfilePictureUrl: string | null; problemTitle: string;
+  problemDifficulty: string; result: "WIN" | "LOSS" | "DRAW";
+  durationMinutes: number; endedAt: string;
+}
+export interface PaginatedResponse<T> {
+  content: T[]; page: number; totalPages: number;
+  totalElements: number; hasNext: boolean;
 }
 export interface UserSearchResult { id: string; username: string; rating: number; }
 

@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
   datasource:
     url: ${DATABASE_URL}
     driver-class-name: org.postgresql.Driver
@@ -79,6 +83,11 @@ jdoodle:
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 
 logging:
