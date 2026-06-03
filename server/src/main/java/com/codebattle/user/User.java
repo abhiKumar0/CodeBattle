@@ -30,6 +30,7 @@ public class User {
     @Builder.Default
     private Role role = Role.USER;
 
+    @Builder.Default
     @Column(nullable = false)
     private int rating = 1200;
 

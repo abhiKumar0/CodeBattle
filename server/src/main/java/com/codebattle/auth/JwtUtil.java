@@ -71,4 +71,25 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    // public String extractUsername(String token) {
+    //     Claims claims = Jwts.parserBuilder()
+    //             .setSigningKey(getSigningKey())
+    //             .build()
+    //             .parseClaimsJws(token)
+    //             .getBody();
+    //     // Username stored in the "sub" claim as userId,
+    //     // so we need to look up by userId — OR store username in token.
+    //     // Simplest fix: add username to token claims in generateToken():
+    //     //
+    //     // In generateToken(String userId, String email):
+    //     //   .claim("username", username)   ← add this param + claim
+    //     //
+    //     // OR just use the email claim and look up:
+    //     String email = claims.get("email", String.class);
+    //     return userRepository.findByEmail(email)
+    //             .map(User::getUsername)
+    //             .orElseThrow(() -> new RuntimeException("User not found for email: " + email));
+    // }
+
 }

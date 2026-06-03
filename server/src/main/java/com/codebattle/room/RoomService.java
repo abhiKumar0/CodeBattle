@@ -5,6 +5,7 @@ import com.codebattle.match.EloService;
 import com.codebattle.problem.Problem;
 import com.codebattle.problem.ProblemRepository;
 import com.codebattle.room.dto.RoomDto;
+import com.codebattle.spectator.SpectatorService;
 import com.codebattle.user.User;
 import com.codebattle.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class RoomService {
     private final ProblemRepository problemRepository;
     private final SimpMessagingTemplate messageTemplate;
     private final EloService eloService;
+    private final SpectatorService spectatorService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -206,6 +208,8 @@ public class RoomService {
 
         broadcast(roomId, "MATCH_ENDED", Map.of("winnerId", winnerId, "winnerUsername", winner.getUsername()));
 
+        spectatorService.clearRoom(roomId);
+
         // Update ELO ratings for both players
     eloService.updateRatings(roomId);
     }
@@ -257,7 +261,7 @@ public class RoomService {
     // Broadcast Helper functions
     private void broadcast(String roomId, String event, Object payload) {
         messageTemplate.convertAndSend(
-                "/topic/room"+roomId,
+                "/topic/room/"+roomId,
                 RoomDto.RoomEvent.builder()
                         .type(event)
                         .payload(payload)

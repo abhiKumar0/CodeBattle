@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/notifications/**").authenticated()
                         .requestMatchers("/api/submissions/**").authenticated()
                         .requestMatchers("/api/match/**").authenticated()
+                        .requestMatchers("/api/spectate/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/leaderboard/rank").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/leaderboard/**").permitAll()

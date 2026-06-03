@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState,useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Copy, CheckCircle, Sun, Moon, X } from "lucide-react";
+import { Copy, CheckCircle, Sun, Moon, X , Eye } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { useRoomStore } from "@/store/roomStore";
@@ -13,6 +13,12 @@ import { useAuthStore } from "@/store/authStore";
 import { useRoomWebSocket, useReadyUp } from "@/hooks/useRoom";
 import { useSubmit } from "@/hooks/useSubmission";
 import { RoomResponse, ProblemDetail, Language } from "@/types";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
+
+// It broadcasts the current code to spectators every time the editor changes.
+// Debounced to 500ms so it doesn't flood the server on every keypress.
 
 const CodeEditor = dynamic(() => import("@/components/editor/CodeEditor"), {
   ssr: false,
@@ -73,7 +79,7 @@ export default function RoomPage() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const qc = useQueryClient();
-  const { userId } = useAuthStore();
+  const { userId, token, username } = useAuthStore();
   const {
     room, setRoom, selectedLanguage, setLanguage,
     code: editorCode, setCode, isSubmitting, opponentActivity,
@@ -107,7 +113,59 @@ export default function RoomPage() {
   const secondsLeft = useCountdown(room?.startedAt ?? null, room?.duration ?? 30);
 
   // ── WebSocket ───────────────────────────────────────────────────────────────
-  useRoomWebSocket(room?.id ?? "");
+useRoomWebSocket(room?.id ?? "");
+
+// ── Spectator count state ────────────────────────────────────────────────────
+const [spectatorCount, setSpectatorCount] = useState(0);
+
+// ── Broadcast code to spectators in realtime (debounced 500ms) ───────────────
+const clientRef  = useRef<Client | null>(null);
+const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+const codeRef    = useRef(editorCode);
+const langRef    = useRef(selectedLanguage);
+codeRef.current = editorCode;
+langRef.current = selectedLanguage;
+
+useEffect(() => {
+  if (!room?.id || !token || room.status !== "ACTIVE") return;
+  const client = new Client({
+    webSocketFactory: () => new SockJS(process.env.NEXT_PUBLIC_WS_URL as string),
+    connectHeaders: { Authorization: `Bearer ${token}` },
+    reconnectDelay: 5000,
+  });
+  clientRef.current = client;
+  client.activate();
+  return () => { client.deactivate(); clientRef.current = null; };
+}, [room?.id, token, room?.status]);
+
+useEffect(() => {
+  if (room?.status !== "ACTIVE" || !room?.id) return;
+  if (timerRef.current) clearTimeout(timerRef.current);
+  timerRef.current = setTimeout(() => {
+    if (!clientRef.current?.active || !username) return;
+    clientRef.current.publish({
+      destination: `/app/spectate/${room.id}/code`,
+      body: JSON.stringify({
+        code:     codeRef.current,
+        language: langRef.current,
+        username: username,
+      }),
+    });
+  }, 500);
+  return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+}, [editorCode, selectedLanguage, room?.status, room?.id, username]);
+
+// Fetch spectator count every 10s while active
+useEffect(() => {
+  if (room?.status !== "ACTIVE" || !room?.id) return;
+  const id = setInterval(() => {
+    api.get<number>(`/api/spectate/count/${room.id}`)
+      .then((r) => setSpectatorCount(r.data))
+      .catch(() => {});
+  }, 10000);
+  return () => clearInterval(id);
+}, [room?.id, room?.status]);
+
 
   // ── When match ends → navigate to result page ───────────────────────────────
   useEffect(() => {
@@ -303,6 +361,12 @@ export default function RoomPage() {
               ⏱ {formatTime(secondsLeft)}
             </div>
           )}
+          {/* Spectator count */}
+{spectatorCount > 0 && (
+  <span className="flex items-center gap-1 font-mono text-xs text-cyan-400/70">
+    <Eye size={11} /> {spectatorCount}
+  </span>
+)}
 
           {/* Opponent info */}
           {opponent && (
