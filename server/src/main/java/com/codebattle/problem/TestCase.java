@@ -9,6 +9,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "problem")
 public class TestCase {
 
     @Id

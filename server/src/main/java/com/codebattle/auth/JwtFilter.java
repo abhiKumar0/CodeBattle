@@ -34,33 +34,40 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws ServletException, IOException {
+        String path = req.getServletPath();
+
         String header = req.getHeader("Authorization");
+        logger.debug("Header is " + header);
 
         if (header == null || !header.startsWith("Bearer ")) {
+            logger.warn("Missing or invalid Authorization header format");
             chain.doFilter(req, res);
             return;
         }
 
         String token = header.replace("Bearer ", "");
         if (!jwtUtil.isValid(token)) {
+            logger.warn("Invalid JWT token");
             chain.doFilter(req, res);
             return;
         }
 
         String userId = jwtUtil.extractUserId(token);
-
+        logger.debug("Extracted userId: "+ userId);
         User user = userRepository.findById(userId).orElse(null);
-
+        logger.info("User found: " + user); // add this after findById
         if (user == null) {
             chain.doFilter(req, res);
             return;
         }
 
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userId, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         chain.doFilter(req, res);
     }
+
+   
 
 }

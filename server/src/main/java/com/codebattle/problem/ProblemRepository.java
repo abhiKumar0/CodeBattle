@@ -12,6 +12,8 @@ public interface ProblemRepository extends JpaRepository<Problem, String> {
 
     List<Problem> findByTopic(String topic);
 
+//    Problem findById(String id);
+
     // value may or may not be exist
     Optional<Problem> findByIsDaily(boolean isDaily);
     // return  latest daily problem

@@ -30,6 +30,7 @@ public class User {
     @Builder.Default
     private Role role = Role.USER;
 
+    @Builder.Default
     @Column(nullable = false)
     private int rating = 1200;
 
@@ -53,4 +54,16 @@ public class User {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     private LocalDateTime lastActiveAt;
+
+    @Column(length = 200)
+    private String bio;
+
+    @Column(length = 500)
+    private String profilePictureUrl;
+
+    @Column(length = 30)
+    private String displayName;
+
+    /** Tracks when the username was last changed (30-day cooldown) */
+    private LocalDateTime lastUsernameChangeAt;
 }
