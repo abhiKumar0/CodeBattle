@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Swords, X, Plus, Hash, ArrowRight } from "lucide-react";
@@ -9,7 +9,7 @@ import api from "@/lib/api";
 import { useMatchStore } from "@/store/matchStore";
 import { useAuthStore } from "@/store/authStore";
 import { useJoinRoom } from "@/hooks/useRoom";
-import { MatchResponse, RoomResponse } from "@/types";
+import { MatchResponse, RoomResponse, ProblemSummary } from "@/types";
 
 export default function RandomMatchPage() {
   const router = useRouter();
@@ -18,11 +18,43 @@ export default function RandomMatchPage() {
   const [roomCode, setRoomCode] = useState("");
   const [dots, setDots] = useState(".");
 
+  // ── States for custom room creation ────────────────────────────────────────
+  const [duration, setDuration] = useState(30);
+  const [problemSearch, setProblemSearch] = useState("");
+  const [selectedProblem, setSelectedProblem] = useState<ProblemSummary | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (status !== "WAITING") return;
     const id = setInterval(() => setDots((d) => d.length >= 3 ? "." : d + "."), 500);
     return () => clearInterval(id);
   }, [status]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // ── Fetch problems for custom room creation ─────────────────────────────────
+  const { data: problems = [] } = useQuery<ProblemSummary[]>({
+    queryKey: ["problems"],
+    queryFn: () => api.get<ProblemSummary[]>("/api/problems").then((r) => r.data),
+  });
+
+  const filteredProblems = (problems || []).filter((p) => {
+    if (!p) return false;
+    const titleMatch = p.title ? p.title.toLowerCase().includes((problemSearch || "").toLowerCase()) : false;
+    const topicMatch = p.topic ? p.topic.toLowerCase().includes((problemSearch || "").toLowerCase()) : false;
+    return titleMatch || topicMatch;
+  });
 
   // ── Check if user already has an open room ──────────────────────────────────
   const { data: myActiveRoom } = useQuery({
@@ -69,7 +101,8 @@ export default function RandomMatchPage() {
   
   // ── Create a private room ───────────────────────────────────────────────────
   const { mutate: createRoom, isPending: creating } = useMutation({
-    mutationFn: () => api.post<RoomResponse>("/api/rooms/create", {duration: 2}).then((r) => r.data),
+    mutationFn: (data: { problemId?: string | null; duration?: number }) =>
+      api.post<RoomResponse>("/api/rooms/create", data).then((r) => r.data),
     onSuccess: (room) => router.push(`/room/${room.code}`),
     onError: (error: any) => {
       const msg: string = error?.response?.data?.error ?? "";
@@ -203,14 +236,177 @@ export default function RandomMatchPage() {
             // CREATE PRIVATE ROOM
           </p>
           <button
-            onClick={() => createRoom()}
-            disabled={creating}
+            onClick={() => setIsModalOpen(true)}
             className="btn-secondary w-full">
-            {creating ? "INITIALIZING..." : "INITIALIZE ROOM"}
+            INITIALIZE ROOM
           </button>
         </div>
 
       </div>
+
+      {/* ── Initialize Room Modal Overlay ── */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+          <div 
+            className="cb-card corner-tl p-6 w-full max-w-sm relative mx-4 bg-card/95 shadow-2xl border border-green-500/20 space-y-4 !overflow-visible"
+            style={{ overflow: "visible" }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors p-1"
+              title="Close modal"
+            >
+              <X size={16} />
+            </button>
+
+            <h3 className="font-mono text-xs text-green-400 tracking-widest">
+              // INITIALIZE PRIVATE ROOM
+            </h3>
+
+            {/* Match Duration Selector */}
+            <div className="space-y-2">
+              <label className="font-mono text-[10px] text-muted-foreground tracking-wider block">
+                MATCH DURATION (MINUTES)
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[15, 30, 45, 60].map((mins) => {
+                  const isActive = duration === mins;
+                  return (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => setDuration(mins)}
+                      className={`font-mono text-[11px] py-1.5 border rounded transition-all duration-200 ${
+                        isActive
+                          ? "border-green-500 bg-green-500/10 text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.15)]"
+                          : "border-border bg-transparent text-muted-foreground hover:border-green-500/30 hover:text-foreground"
+                      }`}
+                    >
+                      {mins}M
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Problem Selector Dropdown */}
+            <div className="space-y-1.5 relative" ref={dropdownRef}>
+              <label className="font-mono text-[10px] text-muted-foreground tracking-wider block">
+                BATTLE PROBLEM
+              </label>
+
+              {selectedProblem ? (
+                <div className="flex items-center justify-between p-3 border border-green-500/20 bg-green-500/5 text-xs rounded">
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="font-mono text-green-400">✓</span>
+                    <span className="font-display font-semibold truncate text-green-400">
+                      {selectedProblem.title}
+                    </span>
+                    <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                      selectedProblem.difficulty === "EASY" ? "bg-green-500/10 text-green-400" :
+                      selectedProblem.difficulty === "MEDIUM" ? "bg-yellow-500/10 text-yellow-400" :
+                      "bg-red-500/10 text-red-400"
+                    }`}>
+                      {selectedProblem.difficulty}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProblem(null)}
+                    className="text-muted-foreground hover:text-red-400 transition-colors p-1"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search problem, or leave empty for random..."
+                    value={problemSearch}
+                    onChange={(e) => {
+                      setProblemSearch(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    className="cb-input w-full text-xs text-left"
+                  />
+
+                  {showDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-50 border border-border bg-card shadow-2xl max-h-48 overflow-y-auto rounded-sm">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProblem(null);
+                          setProblemSearch("");
+                          setShowDropdown(false);
+                        }}
+                        className="w-full flex items-center px-4 py-2.5 hover:bg-green-500/8 transition-colors border-b border-border/50 text-left text-xs font-mono text-muted-foreground"
+                      >
+                        🎲 RANDOM PROBLEM (DEFAULT)
+                      </button>
+                      {filteredProblems.length === 0 ? (
+                        <div className="px-4 py-2.5 text-xs font-mono text-muted-foreground text-center">
+                          NO PROBLEMS FOUND
+                        </div>
+                      ) : (
+                        filteredProblems.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedProblem(p);
+                              setProblemSearch("");
+                              setShowDropdown(false);
+                            }}
+                            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-green-500/8 transition-colors border-b border-border/50 text-left text-xs"
+                          >
+                            <span className="font-display font-medium text-foreground truncate mr-2">
+                              {p.title}
+                            </span>
+                            <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                              p.difficulty === "EASY" ? "bg-green-500/10 text-green-400" :
+                              p.difficulty === "MEDIUM" ? "bg-yellow-500/10 text-yellow-400" :
+                              "bg-red-500/10 text-red-400"
+                            }`}>
+                              {p.difficulty}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="btn-secondary flex-1 py-2 text-xs">
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  createRoom({
+                    problemId: selectedProblem ? selectedProblem.id : null,
+                    duration,
+                  });
+                  setIsModalOpen(false);
+                }}
+                disabled={creating}
+                className="btn-primary flex-1 py-2 text-xs">
+                {creating ? "CREATING..." : "START BATTLE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
