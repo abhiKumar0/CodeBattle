@@ -34,7 +34,7 @@ public class RoomDto {
         private PlayerInfo opponent; //null until some joins
         private ProblemInfo problem; //null untill active
         private int duration;
-        private boolean createrReady;
+        private boolean creatorReady;
         private boolean opponentReady;
         private LocalDateTime createdAt;
         private LocalDateTime startedAt;

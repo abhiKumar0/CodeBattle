@@ -23,7 +23,6 @@ public class FriendController {
     public ResponseEntity<FriendDto.FriendResponse> sendRequest(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable String targetUserId) {
-        System.out.println("Sending request to friend with id: " + targetUserId);
         String userId = extractUserId(authHeader);
         return ResponseEntity.ok(friendService.sendRequest(userId, targetUserId));
     }
@@ -37,6 +36,17 @@ public class FriendController {
 
         String userId = extractUserId(authHeader);
         return ResponseEntity.ok(friendService.acceptRequest(userId, requesterId));
+    }
+
+
+    /** DELETE /api/friend/decline/{requesterId} **/
+    @DeleteMapping("/decline/{requesterId}")
+    public ResponseEntity<Void> decline(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String requesterId) {
+        String userId = extractUserId(authHeader);
+        friendService.declineRequest(userId, requesterId);
+        return ResponseEntity.noContent().build();
     }
 
 

@@ -60,7 +60,7 @@ export default function RandomMatchPage() {
   // ── Cancel matchmaking ──────────────────────────────────────────────────────
   const { mutate: cancelQueue } = useMutation({
     mutationFn: () => api.delete("/api/match/cancel"),
-    // onSuccess: () => { reset(); subRef.current?.unsubscribe(); },
+    onSuccess: () => { reset(); },
   });
 
   // ── Join by room code ───────────────────────────────────────────────────────

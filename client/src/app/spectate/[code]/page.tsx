@@ -1,4 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
@@ -80,6 +82,54 @@ export default function SpectateRoomPage() {
   const [opponentActivity, setOpponentActivity] = useState<PlayerActivity>({
     isRunning: false, lastStatus: null, submissionCount: 0,
   });
+
+  // ── Join spectator session ────────────────────────────────────────────────
+  const { mutate: joinSpectate, isPending: joining } = useMutation({
+    mutationFn: () =>
+      api.post<SpectatorJoinResponse>(`/api/spectate/join/${code}`).then((r) => r.data),
+    onSuccess: (data) => {
+      setRoomData(data);
+      setSpectatorCount(data.spectatorCount);
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error ?? "Cannot spectate this room";
+      toast.error(msg);
+      router.push("/spectate");
+    },
+  });
+
+  // ── Leave on unmount ──────────────────────────────────────────────────────
+  const { mutate: leaveSpectate } = useMutation({
+    mutationFn: () =>
+      api.post(`/api/spectate/leave/${roomData?.roomId}`),
+  });
+
+  // ── Fetch problem detail ──────────────────────────────────────────────────
+  const { data: problem } = useQuery({
+    queryKey: ["problem", roomData?.problem?.id],
+    queryFn: () =>
+      api.get<ProblemDetail>(`/api/problems/${roomData?.problem?.id}`).then((r) => r.data),
+    enabled: !!roomData?.problem?.id,
+  });
+
+  // ── Countdown ─────────────────────────────────────────────────────────────
+  const secondsLeft = useCountdown(
+    roomData?.startedAt ?? null,
+    roomData?.duration ?? 30
+  );
+
+  // ── Join on mount ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    joinSpectate();
+  }, []);
+
+  // ── Auto-detect timer expiry on client side ───────────────────────────────
+  useEffect(() => {
+    if (secondsLeft === 0 && !matchEnded) {
+      setMatchEnded(true);
+      setWinner(null);
+    }
+  }, [secondsLeft, matchEnded]);
 
   // ── WebSocket ─────────────────────────────────────────────────────────────
   useEffect(() => {

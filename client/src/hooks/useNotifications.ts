@@ -91,6 +91,19 @@ export function useNotifications() {
         toast.success("OPPONENT FOUND!");
         router.push(`/room/${payload.roomCode}`);
       }
+
+      // Raw WS events (not persisted notifications) — just need query invalidation
+      if (type === "FRIEND_REMOVED") {
+        qc.invalidateQueries({ queryKey: ["friends"] });
+        toast("A friend removed you from their list", { icon: "👤" });
+      }
+      if (type === "FRIEND_REQUEST_DECLINED") {
+        qc.invalidateQueries({ queryKey: ["friends"] });
+        qc.invalidateQueries({ queryKey: ["friends", "pending"] });
+      }
+      if (type === "CHALLENGE_DECLINED" || type === "CHALLENGE_EXPIRED") {
+        qc.invalidateQueries({ queryKey: ["challenges"] });
+      }
     });
 
     return () => unsubscribe();

@@ -148,7 +148,7 @@ public class RoomService {
         boolean isOpponent = room.getOpponent() != null
                 && room.getOpponent().getId().equals(userId);
 
-        if (isCreator && isOpponent) {
+        if (!isCreator && !isOpponent) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You are not a participant of this room");
         }
@@ -408,7 +408,7 @@ public class RoomService {
                 .opponent(opponentInfo)
                 .problem(problemInfo)
                 .duration(r.getDuration())
-                .createrReady(r.isCreatorReady())
+                .creatorReady(r.isCreatorReady())
                 .opponentReady(r.isOpponentReady())
                 .createdAt(r.getCreatedAt())
                 .startedAt(r.getStartedAt())

@@ -69,6 +69,12 @@ export default function FriendsPage() {
     onSuccess: () => { toast.success("Friend added!"); qc.invalidateQueries({ queryKey: ["friends"] }); },
   });
 
+  const { mutate: decline } = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/friends/decline/${id}`),
+    onSuccess: () => { toast.success("Request declined"); qc.invalidateQueries({ queryKey: ["friends"] }); },
+  });
+
+
   const { mutate: remove } = useMutation({
     mutationFn: (id: string) => api.delete(`/api/friends/${id}`),
     onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["friends"] }); },
@@ -259,10 +265,16 @@ export default function FriendsPage() {
                 <p className="font-display font-semibold">{f.username}</p>
                 <p className="font-mono text-xs text-muted-foreground">⚡{f.rating}</p>
               </div>
-              <button onClick={() => accept(f.userId)}
-                className="btn-primary flex items-center gap-1 px-3 py-1.5 text-xs">
-                <Check size={11} /> ACCEPT
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => accept(f.userId)}
+                  className="btn-primary flex items-center gap-1 px-3 py-1.5 text-xs">
+                  <Check size={11} /> ACCEPT
+                </button>
+                <button onClick={() => decline(f.userId)}
+                  className="btn-secondary px-2 py-1.5">
+                  <X size={11} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

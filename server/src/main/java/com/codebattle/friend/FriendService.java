@@ -57,6 +57,12 @@ public class FriendService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Friend request not found"));
 
+        // Guard: only the TARGET (friend field) can accept, not the requester
+        if (friend.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You cannot accept your own friend request");
+        }
+
         if (friend.getStatus() != FriendStatus.PENDING)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request is not pending");
 
@@ -66,7 +72,6 @@ public class FriendService {
         achievementService.evaluateFriendAchievements(userId);
         achievementService.evaluateFriendAchievements(friend.getUser().getId());
 
-        // FIX: use notifyFriendAccepted, not sendToUser
         notificationService.notifyFriendAccepted(
                 friend.getUser().getId(),
                 friend.getFriend().getUsername()
@@ -75,12 +80,42 @@ public class FriendService {
         return toResponse(saved, friend.getUser());
     }
 
+
+    // --- Decline Request ------------------------------------------------------
+    public void declineRequest(String userId, String requesterId) {
+        Friend friend = friendRepository.findBetween(requesterId, userId).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Friend request not found"
+        ));
+
+        if (friend.getStatus() != FriendStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request is not pending");
+        }
+
+        String requesterUserId = friend.getUser().getId();
+        friendRepository.delete(friend);
+
+        // Notify the original requester so their UI updates
+        notificationService.sendToUser(
+                requesterUserId,
+                "FRIEND_REQUEST_DECLINED",
+                Map.of("declinedBy", userId)
+        );
+    }
+
+
     // ── Remove ────────────────────────────────────────────────────────────────
     public void removeFriend(String userId, String friendUserId) {
         Friend friend = friendRepository.findBetween(userId, friendUserId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Friend relationship not found"));
         friendRepository.delete(friend);
+
+        // Notify the OTHER user so their friend list updates in real-time
+        notificationService.sendToUser(
+                friendUserId,
+                "FRIEND_REMOVED",
+                Map.of("removedBy", userId)
+        );
     }
 
     // ── Queries ───────────────────────────────────────────────────────────────

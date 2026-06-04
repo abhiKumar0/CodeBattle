@@ -42,7 +42,7 @@ public class RoomWebSocketController {
 
         log.debug("Ping from user {} in room {}", userId, roomId);
 
-        simpMessagingTemplate.convertAndSend("/topic/room" + roomId,
+        simpMessagingTemplate.convertAndSend("/topic/room/" + roomId,
                 RoomDto.RoomEvent.builder()
                         .type("PONG")
                         .payload(Map.of("userId", userId))
