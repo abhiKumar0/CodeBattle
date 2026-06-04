@@ -22,7 +22,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // In-memory broker for /topic (broadcast) and /user (point-to-point)
-        registry.enableSimpleBroker("/topic", "/user");
+        registry.enableSimpleBroker("/topic", "/queue");
 
         // Prefix for @MessageMapping methods
         registry.setApplicationDestinationPrefixes("/app");

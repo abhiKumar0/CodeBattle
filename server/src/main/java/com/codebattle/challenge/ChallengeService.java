@@ -142,7 +142,7 @@ public class ChallengeService {
 
         // Notify challenger
         notificationService.sendToUser(
-                challenge.getChallenger().getUsername(),
+                challenge.getChallenger().getId(),
                 "CHALLENGE_DECLINED",
                 java.util.Map.of(
                         "challengeId", challengeId,
@@ -161,7 +161,7 @@ public class ChallengeService {
             c.setStatus(ChallengeStatus.EXPIRED);
             // Notify challenger it expired
             notificationService.sendToUser(
-                    c.getChallenger().getUsername(),
+                    c.getChallenger().getId(),
                     "CHALLENGE_EXPIRED",
                     java.util.Map.of("challengeId", c.getId())
             );

@@ -41,6 +41,18 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findAnyOpenRoomForUser(String userId);
 
 
+    List<Room> findAllByStatus(RoomStatus status);
+
+    @Query("""
+            SELECT r FROM Room r
+            WHERE r.status = 'ACTIVE'
+            AND r.startedAt IS NOT NULL
+            AND r.duration > 0
+            AND FUNCTION('TIMESTAMPADD', MINUTE, r.duration, r.startedAt) < :now
+            """)
+    List<Room> findExpiredActiveRooms(@Param("now") LocalDateTime now);
+
+
     @Query(value = """
             SELECT r FROM Room r
             LEFT JOIN FETCH r.creator

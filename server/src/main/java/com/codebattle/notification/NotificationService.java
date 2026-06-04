@@ -29,13 +29,13 @@ public class NotificationService {
      * Raw realtime push — no DB persistence.
      * Used by ChallengeService and FriendService for quick WS events.
      */
-    public void sendToUser(String username, String type, Object payload) {
+    public void sendToUser(String userId, String type, Object payload) {
         ws.convertAndSendToUser(
-                username,
+                userId,
                 "/queue/notifications",
                 Map.of("type", type, "payload", payload)
         );
-        log.debug("Realtime push → {}: {}", username, type);
+        log.debug("Realtime push → {}: {}", userId, type);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -83,8 +83,11 @@ public class NotificationService {
      * Realtime only — no persistence (user will be redirected immediately).
      */
     public void notifyMatchFound(String username, String roomId, String roomCode) {
-        sendToUser(username, "MATCH_FOUND",
-                Map.of("roomId", roomId, "roomCode", roomCode));
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user != null) {
+            sendToUser(user.getId(), "MATCH_FOUND",
+                    Map.of("roomId", roomId, "roomCode", roomCode));
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -100,11 +103,7 @@ public class NotificationService {
                                         String challengerName, String challengeId) {
         User user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
-            // Fallback: raw push without persistence
-            sendToUser(username, "CHALLENGE_RECEIVED",
-                    Map.of("challengeId", challengeId,
-                           "challengerId", challengerId,
-                           "challengerName", challengerName));
+            log.warn("notifyChallengeReceived: user not found: {}", username);
             return;
         }
         String title = challengerName + " challenged you! ⚔️";
@@ -147,6 +146,7 @@ public class NotificationService {
 
     public void notifyFriendAccepted(String userId, String acceptorUsername) {
         User user = userRepository.findById(userId).orElse(null);
+        log.info("notifyFriendAccepted: user {} accepted {}", userId, acceptorUsername);
         if (user == null) return;
         String title = acceptorUsername + " accepted your friend request";
         String body  = "You can now challenge each other to battles!";
@@ -212,14 +212,12 @@ public class NotificationService {
 
     public void markAllRead(String userId) {
         repo.markAllReadForUser(userId);
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null) pushCount(user.getUsername(), 0);
+        pushCount(userId, 0);
     }
 
     public void markOneRead(String notifId, String userId) {
         repo.markOneRead(notifId, userId);
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null) pushCount(user.getUsername(), repo.countByUserIdAndReadFalse(userId));
+        pushCount(userId, repo.countByUserIdAndReadFalse(userId));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -242,12 +240,12 @@ public class NotificationService {
         repo.save(n);
 
         // Push realtime to client
-        sendToUser(user.getUsername(), "NEW_NOTIFICATION", toDto(n));
-        pushCount(user.getUsername(), repo.countByUserIdAndReadFalse(user.getId()));
+        sendToUser(user.getId(), "NEW_NOTIFICATION", toDto(n));
+        pushCount(user.getId(), repo.countByUserIdAndReadFalse(user.getId()));
     }
 
-    private void pushCount(String username, long count) {
-        sendToUser(username, "UNREAD_COUNT", Map.of("count", count));
+    private void pushCount(String userId, long count) {
+        sendToUser(userId, "UNREAD_COUNT", Map.of("count", count));
     }
 
     private NotificationDto.NotifResponse toDto(Notification n) {

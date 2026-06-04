@@ -54,12 +54,4 @@ public class SpectatorDto {
         private int timeLimit;
         private int memoryLimit;
     }
-
-    // ── NEW: payload for realtime code broadcast ──────────────────────────────
-    @Data @NoArgsConstructor @AllArgsConstructor
-    public static class CodeUpdatePayload {
-        private String code;
-        private String language;
-        private String username;   // for display — server re-reads userId from session
-    }
 }

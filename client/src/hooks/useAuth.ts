@@ -4,7 +4,8 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { AuthResponse, LoginRequest, RegisterRequest } from "@/types";
-import { disconnectGlobalStomp } from "@/hooks/useNotifications";
+import { disconnectStomp } from "@/lib/ws";
+// import { disconnectGlobalStomp } from "@/hooks/useNotifications";
 
 export function useLogin() {
   const { setAuth } = useAuthStore();
@@ -40,7 +41,8 @@ export function useLogout() {
   const { clearAuth } = useAuthStore();
   const router = useRouter();
   return () => {
-    disconnectGlobalStomp();   // ← kill the singleton on logout
+    // disconnectGlobalStomp();   // ← kill the singleton on logout
+    disconnectStomp();
     clearAuth();
     router.push("/auth/login");
   };

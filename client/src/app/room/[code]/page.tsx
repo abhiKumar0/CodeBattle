@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState,useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
@@ -13,12 +13,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useRoomWebSocket, useReadyUp } from "@/hooks/useRoom";
 import { useSubmit } from "@/hooks/useSubmission";
 import { RoomResponse, ProblemDetail, Language } from "@/types";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 
 
-// It broadcasts the current code to spectators every time the editor changes.
-// Debounced to 500ms so it doesn't flood the server on every keypress.
 
 const CodeEditor = dynamic(() => import("@/components/editor/CodeEditor"), {
   ssr: false,
@@ -87,6 +83,25 @@ export default function RoomPage() {
 
   const [copied, setCopied] = useState(false);
   const [darkEditor, setDarkEditor] = useState(true);  // editor theme toggle
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (room?.status === "FINISHED" || room?.status === "EXPIRED") {
+      setShowModal(true);
+    } else {
+      setShowModal(false);
+    }
+  }, [room?.status]);
+
+  // Redirect to dashboard after 5 seconds if the modal is open
+  useEffect(() => {
+    if ((room?.status === "FINISHED" || room?.status === "EXPIRED") && showModal) {
+      const t = setTimeout(() => {
+        router.push("/dashboard");
+      }, 5000);
+      return () => clearTimeout(t);
+    }
+  }, [room?.status, showModal, router]);
 
   // ── Fetch room ──────────────────────────────────────────────────────────────
   const { data: roomData } = useQuery({
@@ -118,42 +133,6 @@ useRoomWebSocket(room?.id ?? "");
 // ── Spectator count state ────────────────────────────────────────────────────
 const [spectatorCount, setSpectatorCount] = useState(0);
 
-// ── Broadcast code to spectators in realtime (debounced 500ms) ───────────────
-const clientRef  = useRef<Client | null>(null);
-const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-const codeRef    = useRef(editorCode);
-const langRef    = useRef(selectedLanguage);
-codeRef.current = editorCode;
-langRef.current = selectedLanguage;
-
-useEffect(() => {
-  if (!room?.id || !token || room.status !== "ACTIVE") return;
-  const client = new Client({
-    webSocketFactory: () => new SockJS(process.env.NEXT_PUBLIC_WS_URL as string),
-    connectHeaders: { Authorization: `Bearer ${token}` },
-    reconnectDelay: 5000,
-  });
-  clientRef.current = client;
-  client.activate();
-  return () => { client.deactivate(); clientRef.current = null; };
-}, [room?.id, token, room?.status]);
-
-useEffect(() => {
-  if (room?.status !== "ACTIVE" || !room?.id) return;
-  if (timerRef.current) clearTimeout(timerRef.current);
-  timerRef.current = setTimeout(() => {
-    if (!clientRef.current?.active || !username) return;
-    clientRef.current.publish({
-      destination: `/app/spectate/${room.id}/code`,
-      body: JSON.stringify({
-        code:     codeRef.current,
-        language: langRef.current,
-        username: username,
-      }),
-    });
-  }, 500);
-  return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-}, [editorCode, selectedLanguage, room?.status, room?.id, username]);
 
 // Fetch spectator count every 10s while active
 useEffect(() => {
@@ -167,14 +146,8 @@ useEffect(() => {
 }, [room?.id, room?.status]);
 
 
-  // ── When match ends → navigate to result page ───────────────────────────────
-  useEffect(() => {
-    if (room?.status === "FINISHED" || room?.status === "EXPIRED") {
-      // Brief delay so the victory/defeat screen shows, then go to profile
-      const t = setTimeout(() => router.push("/profile"), 4000);
-      return () => clearTimeout(t);
-    }
-  }, [room?.status]);
+  // ── Match termination effect ────────────────────────────────────────────────
+  // Removed automatic redirect to allow inspecting code
 
   // ── Mutations ───────────────────────────────────────────────────────────────
   const { mutate: readyUp, isPending: readying } = useReadyUp(room?.id ?? "");
@@ -213,36 +186,7 @@ useEffect(() => {
     EASY: "badge-easy", MEDIUM: "badge-medium", HARD: "badge-hard",
   };
 
-  // ── Finished / Expired ──────────────────────────────────────────────────────
-  if (room.status === "FINISHED" || room.status === "EXPIRED") {
-    const won = room.winnerId === userId;
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="fixed inset-0 pointer-events-none">
-          <div className={`absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-3xl ${
-            won ? "bg-green-500/8" : "bg-red-500/5"}`} />
-        </div>
-        <div className="cb-card corner-tl p-10 text-center w-full max-w-sm relative">
-          <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent ${
-            won ? "via-green-500/40" : "via-red-500/30"} to-transparent`} />
-          <div className="text-6xl mb-6">{room.status === "EXPIRED" ? "⏰" : won ? "🏆" : "💀"}</div>
-          <h2 className={`font-display text-3xl font-bold tracking-wider mb-2 ${
-            won ? "text-green-400" : "text-red-400"}`}>
-            {room.status === "EXPIRED" ? "TIME UP" : won ? "VICTORY" : "DEFEATED"}
-          </h2>
-          <p className="font-mono text-xs text-muted-foreground mb-3 tracking-wider">
-            {won ? "YOU SOLVED IT FIRST" : "OPPONENT WAS FASTER"}
-          </p>
-          <p className="font-mono text-xs text-muted-foreground/60 mb-8 animate-pulse">
-            REDIRECTING TO PROFILE...
-          </p>
-          <Link href="/profile" className="btn-primary w-full block text-center">
-            VIEW RESULTS →
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // Removed full screen replacement on finish to render active workspace underneath the modal popup
 
   // ── Lobby ───────────────────────────────────────────────────────────────────
   if (room.status === "CREATED" || room.status === "WAITING") {
@@ -387,10 +331,19 @@ useEffect(() => {
           {/* ── EDITOR THEME TOGGLE ── */}
           <button
             onClick={() => setDarkEditor(!darkEditor)}
-            className="p-1.5 text-muted-foreground hover:text-green-400 transition-colors"
+            className="p-1.5 text-muted-foreground hover:text-green-400 transition-colors mr-2"
             title="Toggle editor theme">
             {darkEditor ? <Sun size={14} /> : <Moon size={14} />}
           </button>
+
+          {room.status !== "ACTIVE" && (
+            <Link
+              href="/profile"
+              className="px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] tracking-widest hover:bg-red-500/20 transition-colors rounded"
+            >
+              LEAVE MATCH
+            </Link>
+          )}
         </div>
       </div>
 
@@ -509,6 +462,7 @@ useEffect(() => {
               value={editorCode}
               onChange={(v) => setCode(v ?? "")}
               darkMode={darkEditor}
+              readOnly={room.status !== "ACTIVE"}
             />
           </div>
 
@@ -524,13 +478,148 @@ useEffect(() => {
                 roomId: room.id, problemId: problem.id,
                 code: editorCode, language: selectedLanguage,
               })}
-              disabled={isSubmitting || !editorCode.trim()}
+              disabled={isSubmitting || !editorCode.trim() || room.status !== "ACTIVE"}
               className="btn-primary px-8">
               {isSubmitting ? "SUBMITTING..." : "SUBMIT ⚡"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Victory/Defeat Modal Overlay */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
+          {/* Confetti particles — winner only */}
+          {room.winnerId === userId && room.status !== "EXPIRED" && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-2 h-2 rounded-sm"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `-5%`,
+                    backgroundColor: [
+                      "#22c55e", "#3b82f6", "#eab308", "#f43f5e",
+                      "#a855f7", "#06b6d4", "#f97316",
+                    ][i % 7],
+                    animation: `confettiFall ${2.5 + Math.random() * 3}s ${
+                      Math.random() * 2
+                    }s linear infinite`,
+                    opacity: 0.9,
+                    transform: `rotate(${Math.random() * 360}deg)`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Main modal card */}
+          <div
+            className="cb-card corner-tl p-8 text-center w-full max-w-sm relative mx-4 bg-card/95 shadow-2xl border"
+            style={{
+              animation: "scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+              borderColor: room.status === "EXPIRED" || !room.winnerId
+                ? "rgba(234, 179, 8, 0.3)"
+                : room.winnerId === userId
+                ? "rgba(34, 197, 94, 0.3)"
+                : "rgba(244, 63, 94, 0.2)",
+            }}
+          >
+            <div
+              className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent ${
+                room.status === "EXPIRED" || !room.winnerId
+                  ? "via-yellow-500/50"
+                  : room.winnerId === userId
+                  ? "via-green-500/50"
+                  : "via-red-500/40"
+              } to-transparent`}
+            />
+
+            {/* Close button at top right */}
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+              title="Close to inspect code"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Emoji with bounce */}
+            <div
+              className="text-6xl mb-4"
+              style={{ animation: "bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s both" }}
+            >
+              {room.status === "EXPIRED" || !room.winnerId ? "⏰" : room.winnerId === userId ? "🏆" : "💀"}
+            </div>
+
+            {/* Title with fade-in */}
+            <h2
+              className={`font-display text-2xl font-bold tracking-wider mb-2 ${
+                room.status === "EXPIRED" || !room.winnerId
+                  ? "text-yellow-400"
+                  : room.winnerId === userId
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+              style={{ animation: "fadeSlideUp 0.4s ease-out 0.2s both" }}
+            >
+              {room.status === "EXPIRED" || !room.winnerId ? "TIME'S UP" : room.winnerId === userId ? "VICTORY" : "DEFEATED"}
+            </h2>
+
+            <p
+              className="font-mono text-xs text-muted-foreground mb-6 tracking-wider leading-relaxed"
+              style={{ animation: "fadeSlideUp 0.4s ease-out 0.3s both" }}
+            >
+              {room.status === "EXPIRED" || !room.winnerId
+                ? "NEITHER PLAYER SOLVED IT IN TIME"
+                : room.winnerId === userId
+                ? "YOU SOLVED IT FIRST!"
+                : "OPPONENT WAS FASTER"}
+            </p>
+
+            {/* <div
+              className="flex flex-col gap-2"
+              style={{ animation: "fadeSlideUp 0.4s ease-out 0.4s both" }}
+            >
+              <Link
+                href="/profile"
+                className="btn-primary w-full py-2 block text-center text-xs font-mono tracking-widest"
+              >
+                VIEW RESULTS →
+              </Link>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-full py-2 border border-border bg-muted/20 hover:bg-muted/40 transition-colors text-xs font-mono text-muted-foreground hover:text-foreground tracking-widest"
+              >
+                INSPECT CODE
+              </button>
+            </div> */}
+          </div>
+
+          {/* Inline keyframe styles */}
+          <style jsx>{`
+            @keyframes scaleIn {
+              0% { opacity: 0; transform: scale(0.8); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+            @keyframes bounceIn {
+              0% { opacity: 0; transform: scale(0.3); }
+              50% { transform: scale(1.1); }
+              70% { transform: scale(0.95); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+            @keyframes fadeSlideUp {
+              0% { opacity: 0; transform: translateY(12px); }
+              100% { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes confettiFall {
+              0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+              100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }

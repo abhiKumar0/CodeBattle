@@ -49,10 +49,6 @@ public class JwtUtil {
         return getClaims(token).get("email").toString();
     }
 
-    public String extractRole(String token) {
-        return getClaims(token).get("role").toString();
-    }
-
 
 
     public boolean isValid(String token) {

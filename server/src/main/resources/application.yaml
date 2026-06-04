@@ -93,4 +93,4 @@ cloudinary:
 logging:
   level:
     com.codebattle: DEBUG
-    org.springframework.web: DEBUG
+#    org.springframework.web: DEBUG

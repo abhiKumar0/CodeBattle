@@ -6,9 +6,11 @@ import { Users, UserPlus, Check, X, Swords, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { FriendResponse, ChallengeResponse, UserSearchResult } from "@/types";
+import { useAuthStore } from "@/store/authStore";
 
 export default function FriendsPage() {
   const qc = useQueryClient();
+  const { userId } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
@@ -93,7 +95,9 @@ export default function FriendsPage() {
   });
 
   const accepted = friends.filter((f) => f.status === "ACCEPTED");
-  const incomingChallenges = challenges.filter((c) => c.status === "PENDING");
+  const incomingChallenges = challenges.filter(
+    (c) => c.status === "PENDING" && c.challengedId === userId
+  );
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
@@ -109,49 +113,49 @@ export default function FriendsPage() {
       {/* ── Search by username ── */}
       <div className="cb-card corner-tl p-5 animate-fade-up">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
-       
+
 
         <div className="relative" ref={searchRef}>
           {/* Input row */}
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search   size={16}
-    className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+              <Search size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
               <input
-    type="text"
-    value={searchQuery}
-    onChange={(e) => {
-      setSearchQuery(e.target.value);
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
 
-      if (selectedUser) {
-        setSelectedUser(null);
-      }
+                  if (selectedUser) {
+                    setSelectedUser(null);
+                  }
 
-      setShowSuggestions(true);
-    }}
-    onFocus={() => setShowSuggestions(true)}
-    placeholder="Type username..."
-    className="
-  cb-input
-  w-full
-  h-12
-  !pl-14
-  !pr-10
-  leading-none
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                placeholder="Type username..."
+                className="
+                  cb-input
+                  w-full
+                  h-12
+                  !pl-14
+                  !pr-10
+                  leading-none
 "
-  />
+              />
               {/* Clear selected */}
               {(searchQuery || selectedUser) && (
-    <button
-      onClick={() => {
-        setSelectedUser(null);
-        setSearchQuery("");
-      }}
-      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-400 z-10"
-    >
-      <X size={16} />
-    </button>
-  )}
+                <button
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setSearchQuery("");
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-400 z-10"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
             <button
               onClick={() => selectedUser && sendRequest(selectedUser.id)}

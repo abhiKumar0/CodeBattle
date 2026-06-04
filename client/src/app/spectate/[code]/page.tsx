@@ -1,15 +1,12 @@
-"use client";
-
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Eye, Users, ArrowLeft, Activity } from "lucide-react";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { connectStomp, subscribeToRoom } from "@/lib/ws";
 import { useAuthStore } from "@/store/authStore";
 import { ProblemDetail } from "@/types";
 
@@ -84,121 +81,69 @@ export default function SpectateRoomPage() {
     isRunning: false, lastStatus: null, submissionCount: 0,
   });
 
-  const clientRef = useRef<Client | null>(null);
-
-  // ── Join spectator session ────────────────────────────────────────────────
-  const { mutate: joinSpectate, isPending: joining } = useMutation({
-    mutationFn: () =>
-      api.post<SpectatorJoinResponse>(`/api/spectate/join/${code}`).then((r) => r.data),
-    onSuccess: (data) => {
-      setRoomData(data);
-      setSpectatorCount(data.spectatorCount);
-    },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.error ?? "Cannot spectate this room";
-      toast.error(msg);
-      router.push("/spectate");
-    },
-  });
-
-  // ── Leave on unmount ──────────────────────────────────────────────────────
-  const { mutate: leaveSpectate } = useMutation({
-    mutationFn: () =>
-      api.post(`/api/spectate/leave/${roomData?.roomId}`),
-  });
-
-  // ── Fetch problem detail ──────────────────────────────────────────────────
-  const { data: problem } = useQuery({
-    queryKey: ["problem", roomData?.problem?.id],
-    queryFn: () =>
-      api.get<ProblemDetail>(`/api/problems/${roomData?.problem?.id}`).then((r) => r.data),
-    enabled: !!roomData?.problem?.id,
-  });
-
-  // ── Countdown ─────────────────────────────────────────────────────────────
-  const secondsLeft = useCountdown(
-    roomData?.startedAt ?? null,
-    roomData?.duration ?? 30
-  );
-
-  // ── Join on mount ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    joinSpectate();
-  }, []);
-
   // ── WebSocket ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!roomData?.roomId || !token) return;
 
-    const client = new Client({
-      webSocketFactory: () =>
-        new SockJS(process.env.NEXT_PUBLIC_WS_URL as string),
-      connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 5000,
-      onConnect: () => {
-        // Subscribe to room events — same topic as players
-        client.subscribe(`/topic/room/${roomData.roomId}`, (msg) => {
-          const event = JSON.parse(msg.body);
-          const { type, payload } = event;
+    let roomSub: any = null;
 
-          if (type === "SUBMISSION_RUNNING") {
-            const isCreator = payload.userId === roomData.creator.id;
-            if (isCreator) {
-              setCreatorActivity((p) => ({
-                ...p, isRunning: true, lastStatus: null,
-              }));
-            } else {
-              setOpponentActivity((p) => ({
-                ...p, isRunning: true, lastStatus: null,
-              }));
-            }
-          }
+    connectStomp(token).then(() => {
+      roomSub = subscribeToRoom(roomData.roomId, (event: any) => {
+        const { type, payload } = event;
 
-          if (type === "SUBMISSION_RESULT") {
-            const isCreator = payload.userId === roomData.creator.id;
-            const update = {
-              isRunning: false,
-              lastStatus: payload.status,
-              submissionCount: 0,
-            };
-            if (isCreator) {
-              setCreatorActivity((p) => ({
-                ...update, submissionCount: p.submissionCount + 1,
-              }));
-            } else {
-              setOpponentActivity((p) => ({
-                ...update, submissionCount: p.submissionCount + 1,
-              }));
-            }
-            if (payload.status === "ACCEPTED") {
-              toast.success(`${payload.username} solved it! 🏆`);
-            }
+        if (type === "SUBMISSION_RUNNING") {
+          const isCreator = payload.userId === roomData.creator.id;
+          if (isCreator) {
+            setCreatorActivity((p) => ({
+              ...p, isRunning: true, lastStatus: null,
+            }));
+          } else {
+            setOpponentActivity((p) => ({
+              ...p, isRunning: true, lastStatus: null,
+            }));
           }
+        }
 
-          if (type === "MATCH_ENDED") {
-            setMatchEnded(true);
-            setWinner(payload.winnerUsername);
+        if (type === "SUBMISSION_RESULT") {
+          const isCreator = payload.userId === roomData.creator.id;
+          const update = {
+            isRunning: false,
+            lastStatus: payload.status,
+            submissionCount: 0,
+          };
+          if (isCreator) {
+            setCreatorActivity((p) => ({
+              ...update, submissionCount: p.submissionCount + 1,
+            }));
+          } else {
+            setOpponentActivity((p) => ({
+              ...update, submissionCount: p.submissionCount + 1,
+            }));
           }
+          if (payload.status === "ACCEPTED") {
+            toast.success(`${payload.username} solved it! 🏆`);
+          }
+        }
 
-          if (type === "SPECTATOR_JOINED") {
-            setSpectatorCount(payload.count);
-            setSpectators((prev) => [...new Set([...prev, payload.username])]);
-          }
+        if (type === "MATCH_ENDED") {
+          setMatchEnded(true);
+          setWinner(payload.winnerUsername || null);
+        }
 
-          if (type === "SPECTATOR_LEFT") {
-            setSpectatorCount(payload.count);
-            setSpectators((prev) => prev.filter((s) => s !== payload.username));
-          }
-        });
-      },
+        if (type === "SPECTATOR_JOINED") {
+          setSpectatorCount(payload.count);
+          setSpectators((prev) => [...new Set([...prev, payload.username])]);
+        }
+
+        if (type === "SPECTATOR_LEFT") {
+          setSpectatorCount(payload.count);
+          setSpectators((prev) => prev.filter((s) => s !== payload.username));
+        }
+      });
     });
 
-    clientRef.current = client;
-    client.activate();
-
     return () => {
-      client.deactivate();
-      // Leave spectator session
+      roomSub?.unsubscribe();
       if (roomData?.roomId) leaveSpectate();
     };
   }, [roomData?.roomId, token]);
@@ -224,27 +169,82 @@ export default function SpectateRoomPage() {
 
   // ── Match ended overlay ───────────────────────────────────────────────────
   if (matchEnded) {
+    const isTimeout = !winner;
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 bg-green-500/8 rounded-full blur-3xl" />
+          <div
+            className={`absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-3xl ${
+              isTimeout ? "bg-yellow-500/10" : "bg-green-500/8"
+            }`}
+            style={{ animation: "specGlowPulse 3s ease-in-out infinite" }}
+          />
         </div>
-        <div className="cb-card corner-tl p-10 text-center w-full max-w-sm relative">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/40 to-transparent" />
-          <div className="text-6xl mb-4">🏆</div>
-          <h2 className="font-display text-3xl font-bold text-green-400 tracking-wider mb-2">
-            BATTLE OVER
+        <div
+          className="cb-card corner-tl p-10 text-center w-full max-w-sm relative"
+          style={{ animation: "specScaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}
+        >
+          <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent ${
+            isTimeout ? "via-yellow-500/50" : "via-green-500/40"
+          } to-transparent`} />
+          <div
+            className="text-7xl mb-4"
+            style={{ animation: "specBounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s both" }}
+          >
+            {isTimeout ? "⏰" : "🏆"}
+          </div>
+          <h2
+            className={`font-display text-3xl font-bold tracking-wider mb-2 ${
+              isTimeout ? "text-yellow-400" : "text-green-400"
+            }`}
+            style={{ animation: "specFadeUp 0.5s ease-out 0.3s both" }}
+          >
+            {isTimeout ? "TIME'S UP" : "BATTLE OVER"}
           </h2>
-          <p className="font-mono text-sm text-foreground mb-1">
-            <span className="text-green-400 font-bold">{winner}</span> won the battle!
+          <p
+            className="font-mono text-sm text-foreground mb-1"
+            style={{ animation: "specFadeUp 0.5s ease-out 0.45s both" }}
+          >
+            {isTimeout ? (
+              <span className="text-yellow-400">Neither player solved it in time</span>
+            ) : (
+              <><span className="text-green-400 font-bold">{winner}</span> won the battle!</>
+            )}
           </p>
-          <p className="font-mono text-xs text-muted-foreground mb-8">
+          <p
+            className="font-mono text-xs text-muted-foreground mb-8"
+            style={{ animation: "specFadeUp 0.5s ease-out 0.55s both" }}
+          >
             Thanks for watching
           </p>
-          <Link href="/spectate" className="btn-primary w-full block text-center">
+          <Link
+            href="/spectate"
+            className="btn-primary w-full block text-center"
+            style={{ animation: "specFadeUp 0.5s ease-out 0.65s both" }}
+          >
             WATCH MORE BATTLES →
           </Link>
         </div>
+        <style jsx>{`
+          @keyframes specGlowPulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, 0) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+          }
+          @keyframes specScaleIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+          @keyframes specBounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { transform: scale(1.1); }
+            70% { transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+          @keyframes specFadeUp {
+            0% { opacity: 0; transform: translateY(12px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
       </div>
     );
   }

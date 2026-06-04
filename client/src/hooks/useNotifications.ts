@@ -2,9 +2,8 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 import api from "@/lib/api";
+import { connectStomp, onNotification } from "@/lib/ws";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore, AppNotification } from "@/store/notificationStore";
 
@@ -21,55 +20,14 @@ export const NOTIF_ICON: Record<string, string> = {
   SYSTEM:             "📢",
 };
 
-// ── Singleton STOMP client — lives outside React, never killed on re-render ───
-let globalStompClient: Client | null = null;
-let isConnecting = false;
-
-function connectOnce(
-  token: string,
-  onMessage: (type: string, payload: any) => void
-): void {
-  if (globalStompClient?.active || isConnecting) return;
-  isConnecting = true;
-
-  const client = new Client({
-    webSocketFactory: () =>
-      new SockJS(process.env.NEXT_PUBLIC_WS_URL as string),
-    connectHeaders: { Authorization: `Bearer ${token}` },
-    reconnectDelay: 5000,
-    onConnect: () => {
-      console.log("✅ WS connected — notification subscription active");
-      isConnecting = false;
-      client.subscribe("/user/queue/notifications", (msg) => {
-        try {
-          const { type, payload } = JSON.parse(msg.body);
-          onMessage(type, payload);
-        } catch (e) {
-          console.error("Notification parse error:", e);
-        }
-      });
-    },
-    onDisconnect: () => { isConnecting = false; },
-    onStompError: (f) => { console.error("STOMP:", f); isConnecting = false; },
-  });
-
-  globalStompClient = client;
-  client.activate();
-}
-
-export function disconnectGlobalStomp() {
-  globalStompClient?.deactivate();
-  globalStompClient = null;
-  isConnecting = false;
-}
-
-// ── Hook ──────────────────────────────────────────────────────────────────────
+// ── Hook: call once in Navbar — connects WS + listens for notifications ──────
 export function useNotifications() {
   const { token, isAuthenticated } = useAuthStore();
   const { setNotifications, prependNotification, setUnreadCount } = useNotificationStore();
   const router = useRouter();
   const qc = useQueryClient();
 
+  // Fetch notifications on mount
   const { data } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => api.get<AppNotification[]>("/api/notifications").then((r) => r.data),
@@ -88,13 +46,19 @@ export function useNotifications() {
   useEffect(() => { if (data) setNotifications(data); }, [data]);
   useEffect(() => { if (countData) setUnreadCount(countData.unread); }, [countData]);
 
+  // Connect WS + register notification listener
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
-    connectOnce(token, (type, payload) => {
+    // Connect the single STOMP client (idempotent — only connects once)
+    connectStomp(token).catch((err) => console.error("WS connect failed:", err));
+
+    // Register a listener for all notification events
+    const unsubscribe = onNotification((type, payload) => {
       if (type === "NEW_NOTIFICATION") {
         prependNotification(payload as AppNotification);
         setUnreadCount((prev: number) => prev + 1);
+
         const icon = NOTIF_ICON[payload.type] ?? "🔔";
         toast(`${icon} ${payload.title}`, {
           duration: 4000,
@@ -106,15 +70,30 @@ export function useNotifications() {
             fontSize: "11px",
           },
         });
+
+        // Refetch relevant queries
         qc.invalidateQueries({ queryKey: ["notifications"] });
+        if (payload.type === "FRIEND_REQUEST" || payload.type === "FRIEND_ACCEPTED") {
+          qc.invalidateQueries({ queryKey: ["friends"] });
+          qc.invalidateQueries({ queryKey: ["friends", "pending"] });
+          
+        }
+        if (payload.type === "CHALLENGE_RECEIVED" || payload.type === "CHALLENGE_ACCEPTED") {
+          qc.invalidateQueries({ queryKey: ["challenges"] });
+        }
       }
-      if (type === "UNREAD_COUNT") setUnreadCount(payload.count);
+
+      if (type === "UNREAD_COUNT") {
+        setUnreadCount(payload.count);
+      }
+
       if (type === "MATCH_FOUND") {
         toast.success("OPPONENT FOUND!");
         router.push(`/room/${payload.roomCode}`);
       }
     });
-    // No cleanup — singleton must persist across re-renders
+
+    return () => unsubscribe();
   }, [isAuthenticated, token]);
 }
 

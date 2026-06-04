@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
-import { subscribeToRoom, subscribeToMatch, subscribeToNotifications } from "@/lib/ws";
+import { connectStomp, subscribeToRoom, subscribeToMatch } from "@/lib/ws";
 import { useRoomStore } from "@/store/roomStore";
 import { useAuthStore } from "@/store/authStore";
-import { RoomResponse, RoomEvent, SubmissionEvent, Notification } from "@/types";
+import { RoomResponse, RoomEvent, SubmissionEvent } from "@/types";
 
 export function useRoom(roomId: string) {
   return useQuery({
@@ -49,58 +49,86 @@ export function useReadyUp(roomId: string) {
 export function useRoomWebSocket(roomId: string) {
   const qc = useQueryClient();
   const { setOpponentActivity } = useRoomStore();
-  const { userId } = useAuthStore();
+  const { userId, token } = useAuthStore();
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !token) return;
 
-    const roomSub = subscribeToRoom(roomId, (raw) => {
-      const event = raw as RoomEvent;
-      if (event.type === "OPPONENT_JOINED") {
-        toast.success("Opponent joined!");
-        qc.invalidateQueries({ queryKey: ["room", "code"] });
-      }
-      if (event.type === "PLAYER_READY") {
-        toast("Player readied up!");
-        qc.invalidateQueries({ queryKey: ["room", "code"] });
-      }
-      if (event.type === "MATCH_STARTED") {
-        toast.success("Match started! Good luck!");
-        qc.invalidateQueries({ queryKey: ["room", "code"] });
-      }
-      if (event.type === "MATCH_ENDED") {
-        const payload = event.payload as { winnerId: string; winnerUsername: string };
-        const won = payload.winnerId === userId;
-        toast[won ? "success" : "error"](
-          won ? "You won! 🏆" : `${payload.winnerUsername} won. Better luck next time!`
-        );
-        qc.invalidateQueries({ queryKey: ["room", "code"] });
-      }
-    });
+    let roomSub: any = null;
+    let matchSub: any = null;
+    let mounted = true;
 
-    const matchSub = subscribeToMatch(roomId, (raw) => {
-      const event = raw as SubmissionEvent;
-      if (event.type === "SUBMISSION_RUNNING" && event.userId !== userId) {
-        setOpponentActivity({ isRunning: true, lastStatus: null });
-      }
-      if (event.type === "SUBMISSION_RESULT" && event.userId !== userId) {
-        setOpponentActivity({ isRunning: false, lastStatus: event.status, executionTime: event.executionTime });
-        if (event.status === "ACCEPTED") toast.error("Opponent solved it first!");
-      }
-    });
+    // Reuse the single global STOMP connection
+    connectStomp(token).then(() => {
+      if (!mounted) return;
 
-    const notifSub = subscribeToNotifications((raw) => {
-      const notif = raw as Notification;
-      if (notif.type === "ACHIEVEMENT_UNLOCKED") {
-        const p = notif.payload as { title: string; xpReward: number };
-        toast.success(`🏅 Achievement: ${p.title} (+${p.xpReward} XP)`);
-      }
+      // Subscribe to room events (join, ready, start, end)
+      roomSub = subscribeToRoom(roomId, (raw) => {
+        const event = raw as RoomEvent;
+        if (event.type === "OPPONENT_JOINED") {
+          toast.success("Opponent joined!");
+          qc.invalidateQueries({ queryKey: ["room", "code"] });
+        }
+        if (event.type === "PLAYER_READY") {
+          toast("Player readied up!");
+          qc.invalidateQueries({ queryKey: ["room", "code"] });
+        }
+        if (event.type === "MATCH_STARTED") {
+          toast.success("Match started! Good luck!");
+          qc.invalidateQueries({ queryKey: ["room", "code"] });
+        }
+        if (event.type === "MATCH_ENDED") {
+          const payload = event.payload as { winnerId: string; winnerUsername: string; reason?: string };
+          const won = payload.winnerId === userId;
+          toast[won ? "success" : "error"](
+            won ? "You won! 🏆" : `${payload.winnerUsername} won. Better luck next time!`
+          );
+          const newStatus = payload.reason === "TIME_UP" ? "EXPIRED" : "FINISHED";
+          useRoomStore.getState().updateRoomStatus({
+            status: newStatus,
+            winnerId: payload.winnerId || null,
+          });
+          qc.invalidateQueries({ queryKey: ["room"] });
+        }
+      });
+
+      // Subscribe to match events (submission running/result)
+      matchSub = subscribeToMatch(roomId, (raw) => {
+        const event = raw as SubmissionEvent;
+        if (event.type === "SUBMISSION_RUNNING") {
+          if (event.userId !== userId) {
+            setOpponentActivity({ isRunning: true, lastStatus: null });
+          }
+        }
+        if (event.type === "SUBMISSION_RESULT") {
+          if (event.userId !== userId) {
+            setOpponentActivity({ isRunning: false, lastStatus: event.status, executionTime: event.executionTime });
+            if (event.status === "ACCEPTED") {
+              toast.error("Opponent solved it first!");
+            }
+          } else {
+            toast.dismiss("submit");
+            if (event.status === "ACCEPTED") {
+              toast.success("All test cases passed! You solved the problem! 🎉");
+            } else {
+              const statusText = event.status.replace(/_/g, " ");
+              toast.error(`Submission result: ${statusText}`);
+            }
+          }
+        }
+      });
+
+      // NOTE: No notification subscription here!
+      // Notifications are handled globally by useNotifications() in Navbar.
+
+    }).catch((err) => {
+      console.error("Failed to connect to WS:", err);
     });
 
     return () => {
+      mounted = false;
       roomSub?.unsubscribe();
       matchSub?.unsubscribe();
-      notifSub?.unsubscribe();
     };
-  }, [roomId, userId]);
+  }, [roomId, token, userId]);
 }

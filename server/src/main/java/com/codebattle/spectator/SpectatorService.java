@@ -44,6 +44,16 @@ public class SpectatorService {
                     "Can only spectate active rooms (status: " + room.getStatus() + ")");
         }
 
+        // Real-time expiry check: the room might still be ACTIVE in DB
+        // but actually past its deadline (timer hasn't fired yet)
+        if (room.getStartedAt() != null && room.getDuration() > 0) {
+            java.time.LocalDateTime expiry = room.getStartedAt().plusMinutes(room.getDuration());
+            if (java.time.LocalDateTime.now().isAfter(expiry)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "This match has already ended (time expired)");
+            }
+        }
+
         boolean isPlayer = room.getCreator().getId().equals(userId)
                 || (room.getOpponent() != null
                     && room.getOpponent().getId().equals(userId));

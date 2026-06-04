@@ -16,6 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +37,7 @@ public class RoomService {
     private final SimpMessagingTemplate messageTemplate;
     private final EloService eloService;
     private final SpectatorService spectatorService;
+    private final RoomExpiryTaskManager roomExpiryTaskManager;
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -199,6 +204,9 @@ public class RoomService {
         // Not started yet or already finished
         if (room.getStatus() != RoomStatus.ACTIVE) return;
 
+        // Cancel the expiry timer — match finished early
+        roomExpiryTaskManager.cancelExpiry(roomId);
+
         User winner = findUserOrThrow(winnerId);
         room.setStatus(RoomStatus.FINISHED);
         room.setWinner(winner);
@@ -225,11 +233,56 @@ public class RoomService {
         expired.forEach(r -> {
             r.setStatus(RoomStatus.EXPIRED);
             r.setEndedAt(LocalDateTime.now());
-            log.info("Expired room: {}", r.getCode());
+            spectatorService.clearRoom(r.getId());
+            log.info("Expired abandoned room: {}", r.getCode());
         });
 
         if (!expired.isEmpty()) {
             roomRepository.saveAll(expired);
+        }
+    }
+
+
+    // ── Expire a single room (called by RoomExpiryTaskManager timer) ────────
+
+    @Transactional
+    public void expireSingleRoom(String roomId) {
+        Room room = roomRepository.findById(roomId).orElse(null);
+        if (room == null || room.getStatus() != RoomStatus.ACTIVE) {
+            return; // already finished or doesn't exist
+        }
+
+        room.setStatus(RoomStatus.EXPIRED);
+        room.setEndedAt(LocalDateTime.now());
+        roomRepository.save(room);
+
+        broadcast(roomId, "MATCH_ENDED",
+                Map.of("winnerId", "",
+                       "winnerUsername", "",
+                       "reason", "TIME_UP"));
+
+        spectatorService.clearRoom(roomId);
+        log.info("Expired timed-out room: {} (code: {})", roomId, room.getCode());
+    }
+
+
+    // ── Fallback: expire any active rooms past their deadline (crash recovery) ──
+
+    @Transactional
+    public void expireTimedOutRooms() {
+        List<Room> expired = roomRepository.findExpiredActiveRooms(LocalDateTime.now());
+        for (Room room : expired) {
+            room.setStatus(RoomStatus.EXPIRED);
+            room.setEndedAt(LocalDateTime.now());
+            roomRepository.save(room);
+
+            broadcast(room.getId(), "MATCH_ENDED",
+                    Map.of("winnerId", "",
+                           "winnerUsername", "",
+                           "reason", "TIME_UP"));
+
+            spectatorService.clearRoom(room.getId());
+            log.info("Fallback expired room: {} (code: {})", room.getId(), room.getCode());
         }
     }
 
@@ -246,6 +299,15 @@ public class RoomService {
 
         room.setStatus(RoomStatus.ACTIVE);
         room.setStartedAt(LocalDateTime.now());
+
+        // Schedule expiry timer for this room
+        if (room.getDuration() > 0) {
+            Instant expiresAt = room.getStartedAt()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .plus(Duration.ofMinutes(room.getDuration()));
+            roomExpiryTaskManager.scheduleExpiry(room.getId(), expiresAt);
+        }
 
         broadcast(room.getId(), "MATCH_STARTED",
                 RoomDto.ProblemInfo.builder()

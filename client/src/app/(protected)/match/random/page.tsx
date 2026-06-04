@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Swords, X, Plus, Hash, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
-import { connectStomp, subscribeToNotifications } from "@/lib/ws";
 import { useMatchStore } from "@/store/matchStore";
 import { useAuthStore } from "@/store/authStore";
 import { useJoinRoom } from "@/hooks/useRoom";
-import { MatchResponse, Notification, RoomResponse } from "@/types";
+import { MatchResponse, RoomResponse } from "@/types";
 
 export default function RandomMatchPage() {
   const router = useRouter();
   const { token } = useAuthStore();
   const { status, message, queueSize, setStatus, setMessage, setQueueSize, reset } = useMatchStore();
-  const subRef = useRef<{ unsubscribe: () => void } | null>(null);
   const [roomCode, setRoomCode] = useState("");
   const [dots, setDots] = useState(".");
 
@@ -62,15 +60,16 @@ export default function RandomMatchPage() {
   // ── Cancel matchmaking ──────────────────────────────────────────────────────
   const { mutate: cancelQueue } = useMutation({
     mutationFn: () => api.delete("/api/match/cancel"),
-    onSuccess: () => { reset(); subRef.current?.unsubscribe(); },
+    // onSuccess: () => { reset(); subRef.current?.unsubscribe(); },
   });
 
   // ── Join by room code ───────────────────────────────────────────────────────
   const { mutate: joinRoom, isPending: joiningRoom } = useJoinRoom();
 
+  
   // ── Create a private room ───────────────────────────────────────────────────
   const { mutate: createRoom, isPending: creating } = useMutation({
-    mutationFn: () => api.post<RoomResponse>("/api/rooms/create", {}).then((r) => r.data),
+    mutationFn: () => api.post<RoomResponse>("/api/rooms/create", {duration: 2}).then((r) => r.data),
     onSuccess: (room) => router.push(`/room/${room.code}`),
     onError: (error: any) => {
       const msg: string = error?.response?.data?.error ?? "";
@@ -85,23 +84,8 @@ export default function RandomMatchPage() {
     },
   });
 
-  // ── WebSocket: MATCH_FOUND notification ────────────────────────────────────
-  useEffect(() => {
-    if (status !== "WAITING" || !token) return;
-    connectStomp(token).then(() => {
-      const sub = subscribeToNotifications((raw) => {
-        const notif = raw as Notification;
-        if (notif.type === "MATCH_FOUND") {
-          const p = notif.payload as { roomCode: string };
-          toast.success("OPPONENT FOUND!");
-          reset();
-          router.push(`/room/${p.roomCode}`);
-        }
-      });
-      subRef.current = sub;
-    });
-    return () => subRef.current?.unsubscribe();
-  }, [status]);
+  // MATCH_FOUND is now handled globally by useNotifications() in Navbar.
+  // No duplicate WS subscription needed here.
 
   return (
     <div className="min-h-[calc(100vh-3rem)] flex items-center justify-center p-4">

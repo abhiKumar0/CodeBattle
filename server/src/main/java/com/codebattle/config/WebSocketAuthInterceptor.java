@@ -1,6 +1,9 @@
 package com.codebattle.config;
 
 import com.codebattle.auth.JwtUtil;
+import com.codebattle.user.User;
+import com.codebattle.user.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -21,6 +24,7 @@ import java.util.List;
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -42,8 +46,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
                 try {
                     String userId = jwtUtil.extractUserId(token);
-                    String role = jwtUtil.extractRole(token);
-
+                    
+                    User user = userRepository.findById(userId).orElse(null);
+                    String role = (user != null) ? user.getRole().name() : "USER";
                     // Create authenticated Spring Security user
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(
@@ -64,6 +69,15 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     // Bad/expired token -> connection stays unauthenticated
                     log.warn("WebSocket JWT invalid: {}", e.getMessage());
                 }
+            }
+        }
+
+        // Block subscriptions to the removed spectate code topic
+        if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+            String dest = accessor.getDestination();
+            if (dest != null && dest.startsWith("/topic/spectate/")) {
+                log.warn("Blocked subscription to removed spectate code topic: {}", dest);
+                return null;
             }
         }
 
