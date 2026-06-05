@@ -4,7 +4,7 @@ spring:
       max-file-size: 2MB
       max-request-size: 2MB
   datasource:
-    url: ${DATABASE_URL}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/codebattle}
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -30,13 +30,13 @@ spring:
 
   data:
     redis:
-      url: ${REDIS_URL}
+      url: ${REDIS_URL:redis://localhost:6379}
 
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${GMAIL_USER}
-    password: ${GMAIL_APP_PASSWORD}
+    username: ${GMAIL_USER:}
+    password: ${GMAIL_APP_PASSWORD:}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -70,24 +70,24 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
 
 judge0:
-  url: http://localhost:2358
-  api-key: ${JUDGE0_API_KEY}
+  url: ${JUDGE0_URL:http://localhost:2358}
+  api-key: ${JUDGE0_API_KEY:}
 
 jdoodle:
-  client-id: ${JDOODLE_CLIENT_ID}
-  client-secret: ${JDOODLE_CLIENT_SECRET}
+  client-id: ${JDOODLE_CLIENT_ID:}
+  client-secret: ${JDOODLE_CLIENT_SECRET:}
 #  client-id: "1223"
 #  client-secret: "asjsbd"
 
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:defaultSecretKeyForTestingAndStartupWhichIsAtLeast32BytesLong!}
   expiration: 86400000
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
 
 
 logging:
