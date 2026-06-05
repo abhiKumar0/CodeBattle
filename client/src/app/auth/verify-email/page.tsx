@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useVerifyEmail } from "@/hooks/useAuth";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const { mutate: verify, isPending, isError, isSuccess } = useVerifyEmail();
@@ -130,4 +130,28 @@ export default function VerifyEmailPage() {
   }
 
   return null;
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="fixed inset-0 pointer-events-none">
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 bg-green-500/5 rounded-full blur-3xl" />
+          </div>
+          <div className="w-full max-w-sm relative">
+            <div className="cb-card corner-tl p-7 text-center animate-fade-up">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/40 to-transparent" />
+              <h2 className="font-mono text-lg font-bold text-green-400 tracking-widest mb-2 animate-pulse">
+                LOADING VERIFICATION...
+              </h2>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
+  );
 }
