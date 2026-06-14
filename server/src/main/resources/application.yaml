@@ -71,23 +71,23 @@ app:
 
 judge0:
   url: http://localhost:2358
-  api-key: ${JUDGE0_API_KEY}
+  api-key: ${JUDGE0_API_KEY:dummy-key}
 
 jdoodle:
-  client-id: ${JDOODLE_CLIENT_ID}
-  client-secret: ${JDOODLE_CLIENT_SECRET}
+  client-id: ${JDOODLE_CLIENT_ID:dummy-id}
+  client-secret: ${JDOODLE_CLIENT_SECRET:dummy-secret}
 #  client-id: "1223"
 #  client-secret: "asjsbd"
 
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:dummy-secret-value-must-be-long-enough-for-hs256-signature}
   expiration: 86400000
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dummy}
+  api-key: ${CLOUDINARY_API_KEY:dummy}
+  api-secret: ${CLOUDINARY_API_SECRET:dummy}
 
 
 logging:

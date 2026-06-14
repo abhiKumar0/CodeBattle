@@ -39,7 +39,7 @@ public class MatchMakingService {
     private final NotificationService notificationService;
 
     private static final String QUEUE_KEY       = "match:queue";
-    private static final String IN_QUEUE_KEY    = "match:in-queue"; // match:in-queue:{userId}
+    private static final String IN_QUEUE_KEY    = "match:in-queue:"; // match:in-queue:{userId}
     private static final long   QUEUE_TTL_SECS  = 60;                 // remove from queue after 60s
 
 
