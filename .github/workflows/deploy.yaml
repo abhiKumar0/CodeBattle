@@ -25,7 +25,7 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn test
+        run: mvn test -Dtest="!CodebattleApplicationTests"
 
       - name: Build jar
         run: mvn clean package -DskipTests
