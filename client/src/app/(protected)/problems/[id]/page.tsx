@@ -91,9 +91,15 @@ export default function ProblemPage() {
               {problem.sampleTestCases.map((tc, i) => (
                 <div key={tc.id} className="border border-border overflow-hidden">
                   <div className="px-3 py-1.5 bg-muted/30 font-mono text-xs text-muted-foreground">EXAMPLE {i + 1}</div>
-                  <div className="px-3 py-2 space-y-1 font-mono text-xs">
-                    <div><span className="text-muted-foreground">IN:  </span>{tc.input}</div>
-                    <div><span className="text-muted-foreground">OUT: </span><span className="text-green-400">{tc.expectedOutput}</span></div>
+                  <div className="px-3 py-2 font-mono text-xs">
+                    <div className="mb-1.5">
+                      <span className="text-muted-foreground">INPUT:</span>
+                      <pre className="text-foreground whitespace-pre-wrap mt-0.5 leading-relaxed">{tc.input}</pre>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">OUTPUT:</span>
+                      <pre className="text-green-400 whitespace-pre-wrap mt-0.5 leading-relaxed">{tc.expectedOutput}</pre>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -13,7 +13,7 @@ import { MatchResponse, RoomResponse, ProblemSummary } from "@/types";
 
 export default function RandomMatchPage() {
   const router = useRouter();
-  const { token } = useAuthStore();
+  const { token, userId } = useAuthStore();
   const { status, message, queueSize, setStatus, setMessage, setQueueSize, reset } = useMatchStore();
   const [roomCode, setRoomCode] = useState("");
   const [dots, setDots] = useState(".");
@@ -58,9 +58,11 @@ export default function RandomMatchPage() {
 
   // ── Check if user already has an open room ──────────────────────────────────
   const { data: myActiveRoom } = useQuery({
-    queryKey: ["room", "my-active"],
+    queryKey: ["room", "my-active", userId],  // userId in key = separate cache per account
     queryFn: () => api.get<RoomResponse>("/api/rooms/my-active").then((r) => r.data),
+    enabled: !!userId,   // only run when logged in
     retry: false,
+    staleTime: 0,        // never serve stale data from previous user's session
   });
 
   // ── Join matchmaking queue ──────────────────────────────────────────────────

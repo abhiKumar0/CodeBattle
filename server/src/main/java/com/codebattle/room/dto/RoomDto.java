@@ -4,6 +4,7 @@ import com.codebattle.room.RoomStatus;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 public class RoomDto {
@@ -36,9 +37,9 @@ public class RoomDto {
         private int duration;
         private boolean creatorReady;
         private boolean opponentReady;
-        private LocalDateTime createdAt;
-        private LocalDateTime startedAt;
-        private LocalDateTime endedAt;
+       private Instant createdAt;
+private Instant startedAt;
+private Instant endedAt;
         private String winnerId;
     }
 
