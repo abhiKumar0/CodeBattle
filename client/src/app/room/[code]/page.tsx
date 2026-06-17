@@ -49,7 +49,19 @@ function useCountdown(startedAt: string | null, durationMinutes: number) {
 
   useEffect(() => {
     if (!startedAt) return;
-    const endTime = new Date(startedAt).getTime() + durationMinutes * 60 * 1000;
+
+    // Parse the date — server now sends ISO-8601 with Z suffix (Instant)
+    // e.g. "2026-06-13T10:00:00.123Z" which new Date() parses correctly.
+    const parsed = new Date(startedAt).getTime();
+
+    // Defensive guard: if parsing fails (NaN), do nothing rather than
+    // freezing the timer at 0 forever.
+    if (isNaN(parsed)) {
+      console.error("useCountdown: invalid startedAt value:", startedAt);
+      return;
+    }
+
+    const endTime = parsed + durationMinutes * 60 * 1000;
 
     const tick = () => {
       const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
@@ -410,14 +422,14 @@ useEffect(() => {
                       <div className="px-3 py-1.5 bg-muted/30 font-mono text-xs text-muted-foreground">
                         EXAMPLE {i + 1}
                       </div>
-                      <div className="px-3 py-2 space-y-1 font-mono text-xs">
-                        <div>
-                          <span className="text-muted-foreground">INPUT:  </span>
-                          <span>{tc.input}</span>
+                      <div className="px-3 py-2 font-mono text-xs">
+                        <div className="mb-1.5">
+                          <span className="text-muted-foreground">INPUT:</span>
+                          <pre className="text-foreground whitespace-pre-wrap mt-0.5 leading-relaxed">{tc.input}</pre>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">OUTPUT: </span>
-                          <span className="text-green-400">{tc.expectedOutput}</span>
+                          <span className="text-muted-foreground">OUTPUT:</span>
+                          <pre className="text-green-400 whitespace-pre-wrap mt-0.5 leading-relaxed">{tc.expectedOutput}</pre>
                         </div>
                       </div>
                     </div>

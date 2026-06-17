@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { AuthResponse, LoginRequest, RegisterRequest } from "@/types";
 import { disconnectStomp } from "@/lib/ws";
+import { queryClient } from "@/lib/queryClient";
 
 export function useLogin() {
   const { setAuth } = useAuthStore();
@@ -85,6 +86,9 @@ export function useLogout() {
   const router = useRouter();
   return () => {
     disconnectStomp();
+    // Clear ALL React Query cache — prevents friends/rooms/notifications
+    // from the previous account bleeding into the next logged-in account
+    queryClient.clear();
     clearAuth();
     router.push("/auth/login");
   };

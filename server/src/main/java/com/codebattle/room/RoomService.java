@@ -410,11 +410,29 @@ public class RoomService {
                 .duration(r.getDuration())
                 .creatorReady(r.isCreatorReady())
                 .opponentReady(r.isOpponentReady())
-                .createdAt(r.getCreatedAt())
-                .startedAt(r.getStartedAt())
-                .endedAt(r.getEndedAt())
+                .createdAt(toInstant(r.getCreatedAt()))
+                .startedAt(toInstant(r.getStartedAt()))
+                .endedAt(toInstant(r.getEndedAt()))
                 .winnerId(r.getWinner() != null ? r.getWinner().getId() : null)
                 .build();
+    }
+
+    /**
+     * Converts the server's LocalDateTime (wall-clock time in the JVM's
+     * default timezone) into an Instant (absolute UTC point in time).
+     *
+     * WHY THIS MATTERS:
+     * Jackson serializes LocalDateTime as "2026-06-13T10:00:00.123456789"
+     * (no timezone, often with nanosecond precision). JavaScript's
+     * `new Date(...)` CANNOT reliably parse that — it returns Invalid Date
+     * (NaN), which made the battle countdown timer freeze permanently
+     * instead of counting down.
+     *
+     * Instant serializes as "2026-06-13T10:00:00.123Z" which `new Date(...)`
+     * parses correctly in every browser/timezone — fixing the timer.
+     */
+    private Instant toInstant(LocalDateTime ldt) {
+        return ldt == null ? null : ldt.atZone(ZoneId.systemDefault()).toInstant();
     }
 
 }
