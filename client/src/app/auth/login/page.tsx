@@ -70,7 +70,7 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button
               type="button"
-              onClick={() => window.location.href = "http://localhost:8080/oauth2/authorization/google"}
+              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/oauth2/authorization/google`}
               className="btn-secondary flex items-center justify-center gap-2 py-2 px-3 text-[11px] font-mono"
             >
               <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -80,7 +80,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => window.location.href = "http://localhost:8080/oauth2/authorization/github"}
+              onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/oauth2/authorization/github`}
               className="btn-secondary flex items-center justify-center gap-2 py-2 px-3 text-[11px] font-mono"
             >
               <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
