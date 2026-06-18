@@ -47,6 +47,15 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             SELECT r FROM Room r
             WHERE r.status = 'ACTIVE'
             AND r.startedAt IS NOT NULL
+            AND r.endedAt IS NULL
+            ORDER BY r.startedAt DESC
+            """)
+    List<Room> findTrulyActiveRooms();
+
+    @Query("""
+            SELECT r FROM Room r
+            WHERE r.status = 'ACTIVE'
+            AND r.startedAt IS NOT NULL
             AND r.duration > 0
             AND FUNCTION('TIMESTAMPADD', MINUTE, r.duration, r.startedAt) < :now
             """)

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
+import java.time.ZoneId;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -94,7 +95,7 @@ public class SpectatorService {
                 .creator(playerSnap(room.getCreator()))
                 .opponent(room.getOpponent() != null ? playerSnap(room.getOpponent()) : null)
                 .problem(room.getProblem() != null ? problemSnap(room) : null)
-                .startedAt(room.getStartedAt() != null ? room.getStartedAt().toString() : null)
+                .startedAt(room.getStartedAt() != null ? room.getStartedAt().atZone(ZoneId.systemDefault()).toInstant().toString() : null)
                 .duration(room.getDuration())
                 .build();
     }
@@ -123,8 +124,7 @@ public class SpectatorService {
     // ── GET ACTIVE ROOMS ──────────────────────────────────────────────────────
 
     public List<SpectatorDto.ActiveRoomSummary> getActiveRooms() {
-        return roomRepository.findAll().stream()
-                .filter(r -> r.getStatus() == RoomStatus.ACTIVE)
+        return roomRepository.findTrulyActiveRooms().stream()
                 .map(r -> SpectatorDto.ActiveRoomSummary.builder()
                         .roomId(r.getId())
                         .roomCode(r.getCode())
@@ -139,7 +139,7 @@ public class SpectatorService {
                         .difficulty(r.getProblem() != null
                                 ? r.getProblem().getDifficulty().name() : "?")
                         .startedAt(r.getStartedAt() != null
-                                ? r.getStartedAt().toString() : null)
+                                ? r.getStartedAt().atZone(ZoneId.systemDefault()).toInstant().toString() : null)
                         .duration(r.getDuration())
                         .spectatorCount(getSpectatorCount(r.getId()))
                         .build())
