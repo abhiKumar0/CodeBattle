@@ -5,79 +5,86 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 
-// Animated typing effect for the code preview
 const CODE_LINES = [
-  { text: "function maxSubarray(nums) {", color: "#7dd3fc" },
-  { text: "  let max = nums[0], cur = nums[0];", color: "#d1fae5" },
+  { text: "function maxSubarray(nums) {",              color: "#7dd3fc" },
+  { text: "  let max = nums[0], cur = nums[0];",       color: "#d1fae5" },
   { text: "  for (let i = 1; i < nums.length; i++) {", color: "#d1fae5" },
-  { text: "    cur = Math.max(nums[i], cur + nums[i]);", color: "#86efac" },
-  { text: "    max = Math.max(max, cur);", color: "#86efac" },
-  { text: "  }", color: "#d1fae5" },
-  { text: "  return max;", color: "#fde68a" },
-  { text: "}", color: "#7dd3fc" },
+  { text: "    cur = Math.max(nums[i], cur + nums[i]);",color: "#86efac" },
+  { text: "    max = Math.max(max, cur);",              color: "#86efac" },
+  { text: "  }",                                        color: "#d1fae5" },
+  { text: "  return max;",                              color: "#fde68a" },
+  { text: "}",                                          color: "#7dd3fc" },
 ];
 
 const STATS = [
-  { value: "1v1", label: "Real-time battles" },
-  { value: "ELO", label: "Rating system" },
-  { value: "Live", label: "Spectator mode" },
-  { value: "30+", label: "Problems" },
+  { value: "1v1",  label: "Real-time battles" },
+  { value: "ELO",  label: "Rating system"     },
+  { value: "Live", label: "Spectator mode"    },
+  { value: "30+",  label: "Problems"          },
 ];
 
 const HOW_IT_WORKS = [
-  {
-    icon: "⚔️",
-    title: "Find an opponent",
-    desc: "Quick match by ELO rating or invite a friend with a room code.",
-  },
-  {
-    icon: "🧩",
-    title: "Solve the problem",
-    desc: "Both players get the same problem. First correct submission wins.",
-  },
-  {
-    icon: "📈",
-    title: "Climb the ranks",
-    desc: "ELO updates after every battle. Watch yourself rise on the leaderboard.",
-  },
+  { icon: "⚔️", title: "Find an opponent",  desc: "Quick match by ELO rating or invite a friend with a room code." },
+  { icon: "🧩", title: "Solve the problem", desc: "Both players get the same problem. First correct submission wins." },
+  { icon: "📈", title: "Climb the ranks",   desc: "ELO updates after every battle. Watch yourself rise on the leaderboard." },
 ];
+
+const FEATURES = [
+  { icon: "🏆", title: "ELO Rating System",      desc: "Every win and loss adjusts your rating. The same algorithm used by chess grandmasters." },
+  { icon: "👁",  title: "Spectator Mode",         desc: "Watch live battles in real-time. See the code as players type it — read only." },
+  { icon: "⚡", title: "Instant Matchmaking",    desc: "Matched against opponents within 100 ELO points of you in seconds." },
+  { icon: "🔔", title: "Live Notifications",     desc: "Friend requests, challenges, match results — pushed instantly via WebSocket." },
+  { icon: "👥", title: "Friends & Challenges",   desc: "Search friends by username, send challenges, or create private rooms." },
+  { icon: "📊", title: "Match History",          desc: "Full battle history on your profile — every problem, every opponent, every rating change." },
+];
+
+const GithubIcon = () => (
+  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+  </svg>
+);
+
+const LinkedInIcon = () => (
+  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
 
 export default function LandingPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const [typedLines, setTypedLines] = useState<string[]>([]);
+  const [typedLines, setTypedLines]   = useState<string[]>([]);
   const [currentLine, setCurrentLine] = useState(0);
   const [currentChar, setCurrentChar] = useState(0);
-  const [showCursor, setShowCursor] = useState(true);
-  const [verdict, setVerdict] = useState<"" | "running" | "accepted">("running");
+  const [showCursor, setShowCursor]   = useState(true);
+  const [verdict, setVerdict]         = useState<"" | "running" | "accepted">("");
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Redirect logged-in users straight to dashboard
+  // Redirect logged-in users to dashboard
   useEffect(() => {
     if (isAuthenticated) router.replace("/dashboard");
   }, [isAuthenticated]);
 
   // Blinking cursor
   useEffect(() => {
-    const id = setInterval(() => setShowCursor((v) => !v), 530);
+    const id = setInterval(() => setShowCursor(v => !v), 530);
     return () => clearInterval(id);
   }, []);
 
   // Typing animation
   useEffect(() => {
     if (currentLine >= CODE_LINES.length) {
-      // All lines typed — show verdict after short delay
-      setTimeout(() => setVerdict("running"), 600);
+      setTimeout(() => setVerdict("running"),  600);
       setTimeout(() => setVerdict("accepted"), 1800);
       return;
     }
     const line = CODE_LINES[currentLine].text;
     if (currentChar < line.length) {
-      animRef.current = setTimeout(() => setCurrentChar((c) => c + 1), 28);
+      animRef.current = setTimeout(() => setCurrentChar(c => c + 1), 28);
     } else {
       animRef.current = setTimeout(() => {
-        setTypedLines((prev) => [...prev, line]);
-        setCurrentLine((l) => l + 1);
+        setTypedLines(prev => [...prev, line]);
+        setCurrentLine(l => l + 1);
         setCurrentChar(0);
       }, 80);
     }
@@ -88,9 +95,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ── NAV ─────────────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-6 md:px-12
-        bg-background/80 backdrop-blur-md border-b border-border"
+
+      {/* ── NAV ── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-6 md:px-12 bg-background/80 backdrop-blur-md border-b border-border"
         style={{ borderBottomColor: "rgba(34,197,94,0.12)" }}>
         <div className="flex items-center gap-2">
           <div className="relative w-7 h-7 flex items-center justify-center">
@@ -100,61 +107,41 @@ export default function LandingPage() {
           <span className="font-mono font-bold text-green-400 tracking-widest text-sm">CODEBATTLE</span>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/auth/login"
-            className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors tracking-wider">
+          <Link href="/auth/login" className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors tracking-wider">
             LOGIN
           </Link>
-          <Link href="/auth/register"
-            className="btn-primary text-xs px-5 py-2">
+          <Link href="/auth/register" className="btn-primary text-xs px-5 py-2">
             GET STARTED →
           </Link>
         </div>
       </nav>
 
-      {/* ── HERO ────────────────────────────────────────────────────────────── */}
+      {/* ── HERO ── */}
       <section className="min-h-screen flex items-center pt-14 px-6 md:px-12 relative overflow-hidden">
-        {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-green-500/4 rounded-full blur-3xl" />
           <div className="absolute top-1/2 right-1/4 w-[300px] h-[300px] bg-cyan-500/3 rounded-full blur-3xl" />
         </div>
-
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center py-20">
-          {/* Left — headline */}
+          {/* Left */}
           <div className="space-y-8 animate-fade-up">
             <div>
-              {/* <span className="font-mono text-xs text-green-500 tracking-[0.25em] uppercase">
-                // Real-time competitive coding
-              </span> */}
               <h1 className="font-display mt-3 leading-none">
-                <span className="block text-6xl md:text-7xl font-bold text-foreground tracking-tight">
-                  Code.
-                </span>
-                <span className="block text-6xl md:text-7xl font-bold text-foreground tracking-tight">
-                  Battle.
-                </span>
-                <span className="block text-6xl md:text-7xl font-bold text-green-400 tracking-tight glow-text">
-                  Conquer.
-                </span>
+                <span className="block text-6xl md:text-7xl font-bold text-foreground tracking-tight">Code.</span>
+                <span className="block text-6xl md:text-7xl font-bold text-foreground tracking-tight">Battle.</span>
+                <span className="block text-6xl md:text-7xl font-bold text-green-400 tracking-tight glow-text">Conquer.</span>
               </h1>
             </div>
-
             <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-md">
               1v1 coding duels against real opponents. Same problem, same clock.
               Solve it first — win the ELO. Lose — come back stronger.
             </p>
-
             <div className="flex items-center gap-4 flex-wrap">
-              <Link href="/auth/register" className="btn-primary text-sm px-8 py-3">
-                START BATTLING →
-              </Link>
-              <Link href="/auth/login"
-                className="font-mono text-xs text-muted-foreground hover:text-green-400 transition-colors tracking-wider">
+              <Link href="/auth/register" className="btn-primary text-sm px-8 py-3">START BATTLING →</Link>
+              <Link href="/auth/login" className="font-mono text-xs text-muted-foreground hover:text-green-400 transition-colors tracking-wider">
                 Already have an account? Login
               </Link>
             </div>
-
-            {/* Stats row */}
             <div className="flex gap-8 pt-4 border-t border-border">
               {STATS.map(({ value, label }) => (
                 <div key={label}>
@@ -165,14 +152,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right — live code editor mockup */}
+          {/* Right — code editor mockup */}
           <div className="animate-fade-up stagger-2">
             <div className="cb-card corner-tl overflow-hidden relative">
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/50 to-transparent" />
-
-              {/* Editor chrome */}
-              <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border"
-                style={{ borderBottomColor: "rgba(34,197,94,0.1)" }}>
+              <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border" style={{ borderBottomColor: "rgba(34,197,94,0.1)" }}>
                 <div className="flex items-center gap-3">
                   <div className="flex gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
@@ -186,8 +170,6 @@ export default function LandingPage() {
                   <span className="font-mono text-xs text-yellow-400">⏱ 14:32</span>
                 </div>
               </div>
-
-              {/* Code content */}
               <div className="p-5 bg-[#0a0f0d] min-h-56 font-mono text-sm">
                 {typedLines.map((line, i) => (
                   <div key={i} className="leading-7">
@@ -201,39 +183,19 @@ export default function LandingPage() {
                     <span style={{ color: CODE_LINES[currentLine].color }}>
                       {CODE_LINES[currentLine].text.slice(0, currentChar)}
                     </span>
-                    {showCursor && (
-                      <span className="inline-block w-0.5 h-4 bg-green-400 align-middle ml-0.5" />
-                    )}
+                    {showCursor && <span className="inline-block w-0.5 h-4 bg-green-400 align-middle ml-0.5" />}
                   </div>
                 )}
               </div>
-
-              {/* Bottom bar — verdict */}
-              <div className="px-5 py-3 border-t border-border flex items-center justify-between"
-                style={{ borderTopColor: "rgba(34,197,94,0.1)" }}>
+              <div className="px-5 py-3 border-t border-border flex items-center justify-between" style={{ borderTopColor: "rgba(34,197,94,0.1)" }}>
                 <span className="font-mono text-xs text-muted-foreground">Maximum Subarray · MEDIUM</span>
-                {verdict === "" && (
-                  <span className="font-mono text-xs text-muted-foreground">—</span>
-                )}
-                {verdict === "running" && (
-                  <span className="font-mono text-xs text-cyan-400 animate-pulse flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                    JUDGING...
-                  </span>
-                )}
-                {verdict === "accepted" && (
-                  <span className="font-mono text-xs text-green-400 flex items-center gap-1.5"
-                    style={{ animation: "fadeSlideIn 0.3s ease-out" }}>
-                    ✓ ACCEPTED — YOU WIN!
-                  </span>
-                )}
+                {verdict === "running"  && <span className="font-mono text-xs text-cyan-400 animate-pulse flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />JUDGING...</span>}
+                {verdict === "accepted" && <span className="font-mono text-xs text-green-400" style={{ animation: "fadeSlideIn 0.3s ease-out" }}>✓ ACCEPTED — YOU WIN!</span>}
+                {verdict === ""         && <span className="font-mono text-xs text-muted-foreground">—</span>}
               </div>
             </div>
-
-            {/* Floating opponent status */}
             {verdict === "accepted" && (
-              <div className="mt-3 cb-card px-4 py-3 flex items-center justify-between border-red-500/20 bg-red-500/3"
-                style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
+              <div className="mt-3 cb-card px-4 py-3 flex items-center justify-between border-red-500/20 bg-red-500/3" style={{ animation: "fadeSlideIn 0.4s ease-out 0.1s both" }}>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 border border-red-500/30 flex items-center justify-center font-mono text-xs text-red-400">B</div>
                   <span className="font-display text-sm font-semibold">ByteWiz</span>
@@ -245,13 +207,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ────────────────────────────────────────────────────── */}
-      <section className="px-6 md:px-12 py-24 border-t border-border"
-        style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
+      {/* ── HOW IT WORKS ── */}
+      <section className="px-6 md:px-12 py-24 border-t border-border" style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
         <div className="max-w-5xl mx-auto">
           <p className="font-mono text-xs text-green-500 tracking-[0.25em] mb-2">// HOW IT WORKS</p>
           <h2 className="font-display text-4xl font-bold mb-16">Three steps to glory.</h2>
-
           <div className="grid md:grid-cols-3 gap-6">
             {HOW_IT_WORKS.map(({ icon, title, desc }, i) => (
               <div key={i} className="cb-card corner-tl p-7 relative group hover:border-green-500/30 transition-all duration-300">
@@ -265,22 +225,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURES ────────────────────────────────────────────────────────── */}
-      <section className="px-6 md:px-12 py-24 border-t border-border"
-        style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
+      {/* ── FEATURES ── */}
+      <section className="px-6 md:px-12 py-24 border-t border-border" style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
         <div className="max-w-5xl mx-auto">
           <p className="font-mono text-xs text-green-500 tracking-[0.25em] mb-2">// FEATURES</p>
           <h2 className="font-display text-4xl font-bold mb-16">Built for competitors.</h2>
-
           <div className="grid md:grid-cols-2 gap-4">
-            {[
-              { icon: "🏆", title: "ELO Rating System", desc: "Every win and loss adjusts your rating. The same algorithm used by chess grandmasters." },
-              { icon: "👁", title: "Spectator Mode", desc: "Watch live battles in real-time. See the code as players type it — read only." },
-              { icon: "⚡", title: "Instant Matchmaking", desc: "Matched against opponents within 100 ELO points of you in seconds." },
-              { icon: "🔔", title: "Live Notifications", desc: "Friend requests, challenges, match results — pushed instantly via WebSocket." },
-              { icon: "👥", title: "Friends & Challenges", desc: "Search friends by username, send challenges, or create private rooms." },
-              { icon: "📊", title: "Match History", desc: "Full battle history on your profile — every problem, every opponent, every rating change." },
-            ].map(({ icon, title, desc }) => (
+            {FEATURES.map(({ icon, title, desc }) => (
               <div key={title} className="cb-card p-6 flex items-start gap-4 hover:border-green-500/25 transition-all duration-200">
                 <div className="text-2xl shrink-0 mt-0.5">{icon}</div>
                 <div>
@@ -293,9 +244,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ─────────────────────────────────────────────────────────────── */}
-      <section className="px-6 md:px-12 py-32 border-t border-border"
-        style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
+      {/* ── CTA ──
+      <section className="px-6 md:px-12 py-32 border-t border-border" style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
         <div className="max-w-3xl mx-auto text-center">
           <p className="font-mono text-xs text-green-500 tracking-[0.25em] mb-4">// READY TO COMPETE?</p>
           <h2 className="font-display text-5xl md:text-6xl font-bold mb-6 leading-tight">
@@ -307,21 +257,72 @@ export default function LandingPage() {
             Your ELO starts at 1200 — a blank slate, fair for everyone.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Link href="/auth/register" className="btn-primary text-sm px-10 py-3.5">
-              CREATE ACCOUNT →
-            </Link>
-            <Link href="/auth/login"
-              className="font-mono text-xs text-muted-foreground hover:text-green-400 transition-colors tracking-wider">
-              Sign in instead
-            </Link>
+            <Link href="/auth/register" className="btn-primary text-sm px-10 py-3.5">CREATE ACCOUNT →</Link>
+            <Link href="/auth/login" className="font-mono text-xs text-muted-foreground hover:text-green-400 transition-colors tracking-wider">Sign in instead</Link>
+          </div>
+        </div>
+      </section> */}
+
+      {/* ── TEAM ── */}
+      <section className="px-6 md:px-12 py-20 border-t border-border" style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
+        <div className="max-w-5xl mx-auto">
+          {/* <p className="font-mono text-xs text-green-500 tracking-[0.25em] mb-2">// BUILT BY</p> */}
+          <h2 className="font-display text-4xl font-bold mb-12">Meet the team.</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+
+             {/* Abhishek */}
+             <div className="cb-card corner-tl p-7 relative group hover:border-green-500/30 transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/0 group-hover:via-green-500/25 to-transparent transition-all duration-500" />
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 border border-cyan-500/40 flex items-center justify-center font-mono text-xl font-bold text-cyan-400">A</div>
+                <div>
+                  <h3 className="font-display text-xl font-bold">Abhishek Kumar</h3>
+                  <p className="font-mono text-xs text-muted-foreground mt-0.5">MCA · MNNIT Allahabad</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <a href="https://github.com/abhiKumar0" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 font-mono text-xs text-muted-foreground hover:text-green-400 transition-colors border border-border hover:border-green-500/40 px-3 py-2">
+                  <GithubIcon /> GitHub
+                </a>
+                <a href="https://www.linkedin.com/in/abhishekk018/" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 font-mono text-xs text-muted-foreground hover:text-cyan-400 transition-colors border border-border hover:border-cyan-500/40 px-3 py-2">
+                  <LinkedInIcon /> LinkedIn
+                </a>
+              </div>
+            </div>
+
+            {/* Ronit */}
+            <div className="cb-card corner-tl p-7 relative group hover:border-green-500/30 transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/0 group-hover:via-green-500/25 to-transparent transition-all duration-500" />
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 border border-green-500/40 flex items-center justify-center font-mono text-xl font-bold text-green-400">R</div>
+                <div>
+                  <h3 className="font-display text-xl font-bold">Ronit Khanuja</h3>
+                  <p className="font-mono text-xs text-muted-foreground mt-0.5">MCA · MNNIT Allahabad</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <a href="https://github.com/ronit-086" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 font-mono text-xs text-muted-foreground hover:text-green-400 transition-colors border border-border hover:border-green-500/40 px-3 py-2">
+                  <GithubIcon /> GitHub
+                </a>
+                <a href="https://www.linkedin.com/in/ronitkhanuja/" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 font-mono text-xs text-muted-foreground hover:text-cyan-400 transition-colors border border-border hover:border-cyan-500/40 px-3 py-2">
+                  <LinkedInIcon /> LinkedIn
+                </a>
+              </div>
+            </div>
+
+           
+
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer className="px-6 md:px-12 py-8 border-t border-border"
-        style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      {/* ── FOOTER ── */}
+      <footer className="px-6 md:px-12 py-8 border-t border-border" style={{ borderTopColor: "rgba(34,197,94,0.08)" }}>
+        <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 border border-green-500/30 rotate-45 flex items-center justify-center">
               <span className="text-green-500 text-xs -rotate-45">⚔</span>
@@ -329,7 +330,7 @@ export default function LandingPage() {
             <span className="font-mono text-xs text-muted-foreground tracking-widest">CODEBATTLE</span>
           </div>
           <p className="font-mono text-xs text-muted-foreground">
-            Built by Ronit Khanuja · MCA MNNIT Allahabad
+            Built by Abhishek Kumar &amp;&amp; Ronit Khanuja · MCA MNNIT Allahabad
           </p>
         </div>
       </footer>

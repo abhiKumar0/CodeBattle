@@ -195,6 +195,63 @@ public class RoomService {
     }
 
 
+    // -------- Forfeit (Player exits during active battle) -------
+
+    @Transactional
+    public void forfeitRoom(String roomId, String forfeitingUserId) {
+        Room room = findByIdOrThrow(roomId);
+
+        // Only makes sense during an active battle
+        if (room.getStatus() != RoomStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Can only forfeit an active battle");
+        }
+
+        // Verify the user is a participant
+        boolean isCreator  = room.getCreator().getId().equals(forfeitingUserId);
+        boolean isOpponent = room.getOpponent() != null
+                && room.getOpponent().getId().equals(forfeitingUserId);
+
+        if (!isCreator && !isOpponent) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You are not a participant of this room");
+        }
+
+        // Winner = the OTHER player
+        User winner   = isCreator ? room.getOpponent() : room.getCreator();
+        User forfeiter = isCreator ? room.getCreator()  : room.getOpponent();
+
+        if (winner == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot forfeit — opponent not found");
+        }
+
+        // Cancel the scheduled expiry timer
+        roomExpiryTaskManager.cancelExpiry(roomId);
+
+        room.setStatus(RoomStatus.FINISHED);
+        room.setWinner(winner);
+        room.setEndedAt(LocalDateTime.now());
+        roomRepository.save(room);
+
+        log.info("Player {} forfeited room {} — {} wins",
+                forfeiter.getUsername(), room.getCode(), winner.getUsername());
+
+        // Broadcast MATCH_ENDED — both players receive it via WebSocket
+        broadcast(roomId, "MATCH_ENDED", Map.of(
+                "winnerId",       winner.getId(),
+                "winnerUsername", winner.getUsername(),
+                "reason",         "FORFEIT",
+                "forfeiter",      forfeiter.getUsername()
+        ));
+
+        spectatorService.clearRoom(roomId);
+
+        // Update ELO ratings — same as normal finish, forfeiter loses rating
+        eloService.updateRatings(roomId);
+    }
+
+
     // -------- Finish (Called by Submission service) -------
 
     @Transactional

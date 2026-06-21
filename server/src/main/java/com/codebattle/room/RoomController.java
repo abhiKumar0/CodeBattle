@@ -69,6 +69,21 @@ public class RoomController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * POST /api/rooms/{id}/forfeit
+     * Called when a player exits during an ACTIVE battle.
+     * The exiting player loses — the opponent wins immediately.
+     * ELO is updated the same as a normal finish.
+     */
+    @PostMapping("/{id}/forfeit")
+    public ResponseEntity<Void> forfeit(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String id) {
+        String userId = extractUserId(authHeader);
+        roomService.forfeitRoom(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
 
     /** GET /api/rooms/my-active — returns current user's active/waiting/created room if any */
     @GetMapping("/my-active")

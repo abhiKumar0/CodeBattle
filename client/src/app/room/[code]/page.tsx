@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
@@ -95,7 +95,8 @@ export default function RoomPage() {
 
   const [copied, setCopied] = useState(false);
   const [darkEditor, setDarkEditor] = useState(true);  // editor theme toggle
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);         // victory/defeat modal
+  const [showForfeitModal, setShowForfeitModal] = useState(false); // forfeit confirm modal
 
   useEffect(() => {
     if (room?.status === "FINISHED" || room?.status === "EXPIRED") {
@@ -145,6 +146,69 @@ useRoomWebSocket(room?.id ?? "");
 // ── Spectator count state ────────────────────────────────────────────────────
 const [spectatorCount, setSpectatorCount] = useState(0);
 
+// ── Broadcast code to spectators in realtime (debounced 500ms) ───────────────
+const spectateClientRef   = useRef<import("@stomp/stompjs").Client | null>(null);
+const spectateConnected   = useRef(false);   // ← tracks STOMP handshake, not just activate()
+const spectateTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+const latestCode          = useRef(editorCode);
+const latestLang          = useRef(selectedLanguage);
+latestCode.current = editorCode;
+latestLang.current = selectedLanguage;
+
+// Connect once when room becomes ACTIVE
+useEffect(() => {
+  if (room?.status !== "ACTIVE" || !room?.id || !token) return;
+
+  import("@stomp/stompjs").then(({ Client }) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const SockJS = require("sockjs-client");
+    const client = new Client({
+      webSocketFactory: () => new SockJS(process.env.NEXT_PUBLIC_WS_URL),
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 5000,
+      onConnect: () => {
+        spectateConnected.current = true;   // ← only true AFTER handshake
+      },
+      onDisconnect: () => {
+        spectateConnected.current = false;
+      },
+      onStompError: () => {
+        spectateConnected.current = false;
+      },
+    });
+    spectateClientRef.current = client;
+    client.activate();
+  });
+
+  return () => {
+    spectateConnected.current = false;
+    spectateClientRef.current?.deactivate();
+    spectateClientRef.current = null;
+  };
+}, [room?.id, room?.status, token]);
+
+// Debounced broadcast: fires 500ms after user stops typing
+useEffect(() => {
+  if (room?.status !== "ACTIVE" || !room?.id || !username) return;
+  if (spectateTimerRef.current) clearTimeout(spectateTimerRef.current);
+  spectateTimerRef.current = setTimeout(() => {
+    // Only publish when STOMP handshake is complete, not just activated
+    if (!spectateConnected.current || !spectateClientRef.current) return;
+    try {
+      spectateClientRef.current.publish({
+        destination: `/app/spectate/${room.id}/code`,
+        body: JSON.stringify({
+          code:     latestCode.current,
+          language: latestLang.current,
+          username: username,
+        }),
+      });
+    } catch (e) {
+      // Silently ignore if connection dropped between check and publish
+    }
+  }, 500);
+  return () => { if (spectateTimerRef.current) clearTimeout(spectateTimerRef.current); };
+}, [editorCode, selectedLanguage, room?.status, room?.id, username]);
 
 // Fetch spectator count every 10s while active
 useEffect(() => {
@@ -173,6 +237,25 @@ useEffect(() => {
       router.push("/dashboard");
     },
     onError: () => toast.error("Could not close room"),
+  });
+
+  // ── Forfeit — exit during active battle, you lose, opponent wins ────────────
+  const roomIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => { roomIdRef.current = room?.id; }, [room?.id]);
+
+  const { mutate: forfeit, isPending: forfeiting } = useMutation({
+    mutationFn: () => {
+      const id = roomIdRef.current;
+      if (!id) return Promise.reject(new Error("Room ID not available"));
+      return api.post(`/api/rooms/${id}/forfeit`);
+    },
+    onSuccess: () => {
+      setShowForfeitModal(false);
+    },
+    onError: (err: any) => {
+      setShowForfeitModal(false);
+      toast.error(err?.response?.data?.error ?? "Could not forfeit — try again");
+    },
   });
 
   const copyCode = () => {
@@ -347,6 +430,16 @@ useEffect(() => {
             title="Toggle editor theme">
             {darkEditor ? <Sun size={14} /> : <Moon size={14} />}
           </button>
+
+          {/* ── EXIT / FORFEIT button — only during active battle ── */}
+          {room.status === "ACTIVE" && (
+            <button
+              onClick={() => setShowForfeitModal(true)}
+              className="flex items-center gap-1.5 font-mono text-xs text-red-400/60 hover:text-red-400 border border-red-500/20 hover:border-red-500/50 px-2.5 py-1 transition-all"
+              title="Exit battle (you will lose)">
+              <X size={11} /> EXIT
+            </button>
+          )}
 
           {room.status !== "ACTIVE" && (
             <Link
@@ -630,6 +723,46 @@ useEffect(() => {
               100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* ── FORFEIT CONFIRMATION MODAL ─────────────────────────────────────── */}
+      {showForfeitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setShowForfeitModal(false)}
+          />
+          {/* Modal */}
+          <div className="relative cb-card corner-tl p-8 w-full max-w-sm text-center z-10">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+
+            <div className="text-5xl mb-4">🏳️</div>
+            <h2 className="font-display text-2xl font-bold text-red-400 tracking-wider mb-2">
+              FORFEIT BATTLE?
+            </h2>
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-2">
+              If you exit now you will <span className="text-red-400 font-bold">lose this match</span>.
+            </p>
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
+              Your opponent will win and rating will be updated accordingly.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowForfeitModal(false)}
+                className="btn-secondary flex-1">
+                STAY & FIGHT
+              </button>
+              <button
+                onClick={() => forfeit()}
+                disabled={forfeiting}
+                className="flex-1 font-mono text-xs font-bold tracking-wider py-2.5 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50">
+                {forfeiting ? "FORFEITING..." : "YES, FORFEIT"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
