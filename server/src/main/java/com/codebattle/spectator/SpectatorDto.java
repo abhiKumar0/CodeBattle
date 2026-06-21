@@ -55,9 +55,9 @@ public class SpectatorDto {
         private int memoryLimit;
     }
 
-    // ── Received from room page players via STOMP @MessageMapping ─────────────
-    // Client sends to: /app/spectate/{roomId}/code
-    // Server rebroadcasts to: /topic/spectate/{roomId}
+    // ── Received from room page via STOMP @MessageMapping ─────────────────────
+    // Client sends to:      /app/spectate/{roomId}/code
+    // Server rebroadcasts:  /topic/spectate/{roomId}
     @Data @NoArgsConstructor @AllArgsConstructor
     public static class CodeUpdatePayload {
         private String code;

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -60,40 +61,44 @@ public class SpectatorController {
         return ResponseEntity.ok(spectatorService.getSpectatorCount(roomId));
     }
 
-    // ── WebSocket: player sends code → server rebroadcasts to spectators ─────
+    // ── WebSocket: player types code → server rebroadcasts to spectators ─────
     //
-    // Player (room page) publishes to:   /app/spectate/{roomId}/code
-    // Server broadcasts to:              /topic/spectate/{roomId}
-    // Spectators subscribed there receive CODE_UPDATE event instantly
+    // Client (room page) publishes to:  /app/spectate/{roomId}/code
+    // Server broadcasts to:             /topic/spectate/{roomId}
+    // Spectators subscribed there receive CODE_UPDATE instantly
     //
-    @org.springframework.messaging.handler.annotation.MessageMapping("/spectate/{roomId}/code")
+    @MessageMapping("/spectate/{roomId}/code")
     public void broadcastCode(
             @DestinationVariable String roomId,
             @Payload SpectatorDto.CodeUpdatePayload payload,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        // Verify sender is authenticated via WS session
-        String userId = (String) headerAccessor.getSessionAttributes()
-                .getOrDefault("userId", "");
+        // Get userId from WS session (set by WebSocketAuthInterceptor)
+        Object userIdObj = headerAccessor.getSessionAttributes() != null
+                ? headerAccessor.getSessionAttributes().get("userId")
+                : null;
 
-        if (userId.isEmpty()) {
+        if (userIdObj == null) {
             log.warn("Unauthenticated code broadcast for room {}", roomId);
             return;
         }
 
+        String userId = userIdObj.toString();
+
         log.debug("Code update: room={}, user={}, lang={}, chars={}",
                 roomId, payload.getUsername(),
-                payload.getLanguage(), payload.getCode().length());
+                payload.getLanguage(),
+                payload.getCode() != null ? payload.getCode().length() : 0);
 
         // Rebroadcast to all spectators watching this room
         ws.convertAndSend(
                 "/topic/spectate/" + roomId,
                 Map.of(
-                    "type",     "CODE_UPDATE",
-                    "userId",   userId,
-                    "username", payload.getUsername(),
-                    "code",     payload.getCode(),
-                    "language", payload.getLanguage()
+                        "type",     "CODE_UPDATE",
+                        "userId",   userId,
+                        "username", payload.getUsername() != null ? payload.getUsername() : "",
+                        "code",     payload.getCode() != null ? payload.getCode() : "",
+                        "language", payload.getLanguage() != null ? payload.getLanguage() : "java"
                 )
         );
     }
